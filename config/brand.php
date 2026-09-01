@@ -1,0 +1,15 @@
+<?php
+
+return [
+
+    'logo' => env('BRAND_LOGO', 'https://lh3.googleusercontent.com/aida/AEtjO1VfNVvA0P1rVwqDJXRKgXNrIBJ6Rg6G9_1Ju123fB9jt8QQp7mPTuHXHav3XabT3yVJQ5UB3c7iF7OKxb2lOx0Ns7bh1gN6YuSlble8UeME11x_o0WNtq-niVG-k2WQT4empCVV2Hpsu8aFSGKBIzEfSRU_Bda2m-jjfNSnZh4ExMrksarQmj-RgVPF9GaLVx9wigDaGawnrL_tZMyI6ZxEVKXFNcBsBhH00RjJYg3pDgNSM5kwCA1PD6c'),
+
+    'avatar' => env('BRAND_AVATAR', 'https://lh3.googleusercontent.com/aida/AEtjO1W5ID4FumHaQsUqh0-HRrqjGIrgB-NfIvxBwiQaBS2JJIYZXweBksWWHY09vUAJ_mRnqRuiu83kbhlmpCcluuj4wqlkLyyNlmdjvbLEwpIFjril3gjQz7KFHyp2_qaqvggKwA87x6zDvewZ6OxMK3tGw3qw38563-4p_ZMC2TGjaJ1nwXmPKx0ID7-C7Lpv8p-Aq5EAjhFIpvDAAXGx3cMgFg5lUu2Sqy3U_J1Sbg-TbDWx8L4M-TyKBAI'),
+
+    'voice_avatar' => env('BRAND_VOICE_AVATAR', 'https://lh3.googleusercontent.com/aida-public/AB6AXuAoki-TlU30KtRxyT68X4AeawN3BMJJ_GHyz1hNPL2bigVXJdAZ_gtXow0VFr05Ts3YYJ9wBmUORJ6Q0t7A0ugdrC3xQfIP0qYhzn4nWDAoU7ltG2kYXHVeqn7hDFMJ6VidQfsCpuotk8s85WT9s-gweyuuOOwi40KMEPkGfrV7kHqCaZWkaazbX71iztQXcEP5FELpzbKJQLzzltFg6cu_PG_wMXg7wuU5uEqtyr3eAQWdoBPFC5em'),
+
+    'home_avatar' => env('BRAND_HOME_AVATAR', 'https://lh3.googleusercontent.com/aida-public/AB6AXuAEWLtAL7f8ddTUvGPCb6ZyP8PIRIWVq_nkqMCY37J6FWfPxxdJhyWROsV7mYbFkAaE3HLOSPWfHZ9z28AD_b8m_X6LS3tfe_0cByYBJH8UgT9earRMzlpyDYLFLAA76IzdvuLrpGH0yqDDe_ypIfQ4BdaPjFVnhT3YG7sQr-wxvfeWxjOqUCZa4VaMgMwLs5wkQpB2vmVxSnONYmZpCiqVpKp0DOrVV0G1_18b44snFnUWJEbhbzdV'),
+
+    'auth_avatar' => env('BRAND_AUTH_AVATAR', 'https://lh3.googleusercontent.com/aida/AEtjO1UeVQzch-YN-75EIGAcnAJteSWnzr4ZXmXgM5ktHCmWbG65owDDe5yOsKy8fb5QLeqp4aWqfK5jLXL7A0MZMecPXxQJf_0XPc3juGCOHnz1mSKQyL5ANtsOKqgTRWFWVhQPreZEFkfzi7s7WAh94yb2dvNtwkynPmL9U3auCa6OkSC9tdGScszomRU8HRSTmB1lhQDs4aUcjKu8__vhWyYvSXDtio32Mdb0K6jlsa7nLjLO4OmlDiMJD-A'),
+
+];

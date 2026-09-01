@@ -1,0 +1,47 @@
+# Dependencias
+/node_modules
+/vendor
+
+# Configuración local y secretos
+.env
+.env.*
+!.env.example
+/auth.json
+/storage/*.key
+
+# Base de datos local
+/database/*.sqlite
+/database/*.sqlite-journal
+*.sqlite3
+
+# Compilados y cachés
+/public/build
+/public/hot
+/public/storage
+/.phpunit.cache
+.phpunit.result.cache
+/storage/pail
+
+# Logs
+*.log
+npm-debug.log
+yarn-error.log
+
+# Entornos de desarrollo
+Homestead.json
+Homestead.yaml
+.phpactor.json
+
+# Editores y sistema operativo
+/.fleet
+/.idea
+/.nova
+/.vscode
+/.zed
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Herramientas de IA
+/.claude
+CLAUDE.local.md
