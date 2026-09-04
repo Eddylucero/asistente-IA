@@ -11,7 +11,9 @@ function escapeHtml(value) {
 }
 
 function formatInline(value) {
-    return value.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    return value
+        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a class="text-primary underline underline-offset-2 hover:text-primary-container" href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
 }
 
 function isTableSeparator(line) {
@@ -20,6 +22,19 @@ function isTableSeparator(line) {
 
 function parseTableRow(line) {
     return line.trim().replace(/^\||\|$/g, '').split('|').map((cell) => cell.trim());
+}
+
+function utcMapCard(location) {
+    const maps = {
+        MATRIZ: ['Campus La Matriz', 'Universidad+Tecnica+de+Cotopaxi+Campus+Matriz+Latacunga'],
+        SALACHE: ['Campus Salache', 'Universidad+Tecnica+de+Cotopaxi+Campus+Salache'],
+        PUJILI: ['Extensión Pujilí', 'Universidad+Tecnica+de+Cotopaxi+Extension+Pujili'],
+        LA_MANA: ['Extensión La Maná', 'Universidad+Tecnica+de+Cotopaxi+Extension+La+Mana'],
+        SALCEDO: ['Campus Salcedo', 'Universidad+Tecnica+de+Cotopaxi+Campus+Salcedo'],
+    };
+    const [title, query] = maps[location] || maps.MATRIZ;
+
+    return `<div class="message-map-card"><iframe title="Mapa de ${title} de la UTC" loading="lazy" src="https://www.google.com/maps?q=${query}&output=embed"></iframe></div>`;
 }
 
 function formatMarkdown(value) {
@@ -50,6 +65,14 @@ function formatMarkdown(value) {
 
             output.push(`<div class="message-table-wrapper"><table class="message-table"><thead><tr>${headers.map((header) => `<th>${formatInline(header)}</th>`).join('')}</tr></thead><tbody>${rows.map((row) => `<tr>${headers.map((_, cellIndex) => `<td>${formatInline(row[cellIndex] || '')}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`);
             index -= 1;
+            continue;
+        }
+
+        const mapMarker = line.trim().match(/^\[\[UTC_MAPA_(MATRIZ|SALACHE|PUJILI|LA_MANA|SALCEDO)\]\]$/);
+
+        if (mapMarker) {
+            closeList();
+            output.push(utcMapCard(mapMarker[1]));
             continue;
         }
 
@@ -102,7 +125,11 @@ function createTypingIndicator() {
 }
 
 function now() {
-    return new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    return new Date().toLocaleTimeString('es-EC', {
+        timeZone: 'America/Guayaquil',
+        hour: 'numeric',
+        minute: '2-digit',
+    });
 }
 
 export function initChat() {

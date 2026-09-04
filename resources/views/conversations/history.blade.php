@@ -13,7 +13,7 @@
                 class="flex h-12 shrink-0 items-center justify-center gap-2 rounded-full bg-primary px-5 text-label-md font-label-md text-on-primary shadow-sm transition hover:-translate-y-0.5 hover:opacity-90"
                 href="{{ route('conversations.create') }}"
             >
-                <span class="material-symbols-outlined">add_comment</span>
+                <span class="material-symbols-outlined">add</span>
                 Nueva conversación
             </a>
         </header>
@@ -30,11 +30,16 @@
                     <div class="flex flex-col gap-stack-sm" data-history-group>
                         <h2 class="pl-2 text-label-sm font-label-sm uppercase tracking-widest text-on-surface-variant">{{ $dateLabel }}</h2>
                         @foreach ($dateConversations as $conversation)
-                            @php $summary = $conversation->summary(); @endphp
-                            <article class="group relative flex flex-col gap-3 overflow-hidden rounded-2xl bg-surface-container-lowest p-stack-md shadow-sm ring-1 ring-outline-variant/10 transition hover:-translate-y-0.5 hover:shadow-md" data-history-item data-search-text="{{ strtolower(($conversation->title ?: '') . ' ' . $summary . ' ' . $conversation->updated_at->format('d/m/Y')) }}">                                
+                            @php
+                                $title = $conversation->title === 'Acompañamiento emocional'
+                                    ? $conversation->thematicTitle()
+                                    : ($conversation->title ?: 'Sesión sin título');
+                                $summary = $conversation->summary();
+                            @endphp
+                            <article class="group relative flex flex-col gap-3 overflow-hidden rounded-2xl bg-surface-container-lowest p-stack-md shadow-sm ring-1 ring-outline-variant/10 transition hover:-translate-y-0.5 hover:shadow-md" data-history-item data-search-text="{{ strtolower($title . ' ' . $summary . ' ' . $conversation->updated_at->format('d/m/Y')) }}">                                
                                 <div class="flex items-start justify-between gap-3 pl-2">
                                     <a class="min-w-0 flex-1" href="{{ route('conversations.show', $conversation) }}">
-                                        <h3 class="truncate text-headline-md font-headline-md text-on-surface transition group-hover:text-primary">{{ $conversation->title ?: 'Sesión sin título' }}</h3>
+                                        <h3 class="truncate text-headline-md font-headline-md text-on-surface transition group-hover:text-primary">{{ $title }}</h3>
                                         <p class="mt-1 flex items-center gap-2 text-label-md font-label-md text-on-surface-variant">
                                             <span class="material-symbols-outlined text-[16px]">schedule</span>
                                             {{ $conversation->updated_at->format('g:i A') }} · {{ $conversation->messages_count }} {{ $conversation->messages_count === 1 ? 'mensaje' : 'mensajes' }}
@@ -95,6 +100,21 @@
                     <div class="mt-4 flex items-start gap-3 rounded-xl bg-secondary/10 p-3 text-on-secondary-container">
                         <span class="material-symbols-outlined shrink-0">auto_awesome</span>
                         <p class="text-body-md font-body-md">Aún no hay suficiente información para identificar tus temas frecuentes.</p>
+                    </div>
+                </section>
+
+                <section
+                    class="group relative h-48 w-full overflow-hidden rounded-2xl bg-cover bg-center shadow-sm"
+                    style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuC9ThBubqOHu2tHfKhljrTZht0dj7iQlrvBUwoK6wuIghxQD_La9hVWe33JeZP2FCYVeo7pxuI11_j2vp-5OM3IYKq2TDDGW0oaCBOWTzI2XZ-_g1evuUGaS1Qdu5do3nUxlX2sth1beh783XqgAw7eZhmGHDXcGFU782ZYWTasGo73JBf1eGbWFsKqxwW12jdoLrud2PcGHS9Ycj9ImFpSjg8xB2D_NfzFuKj_jjiYd48n-J5T2cU4')"
+                    aria-label="Espacio seguro de Mente"
+                >
+                    <div class="absolute inset-0 bg-gradient-to-t from-surface/90 via-surface/35 to-transparent"></div>
+                    <div class="absolute bottom-4 left-4 right-4">
+                        <span class="flex items-center gap-2 text-label-md font-label-md text-on-surface">
+                            <span class="material-symbols-outlined text-secondary">insights</span>
+                            Espacio seguro
+                        </span>
+                        <p class="mt-1 text-body-md text-on-surface-variant">Un lugar privado para volver a tus reflexiones cuando lo necesites.</p>
                     </div>
                 </section>
             </aside>

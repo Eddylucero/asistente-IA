@@ -80,6 +80,9 @@ const RULES = {
         password: { required: true, minlength: 8 },
         password_confirmation: { required: true, equalTo: '#new_password' },
     },
+    'account-delete': {
+        password: { required: true },
+    },
 };
 
 const MESSAGES = {
@@ -155,6 +158,11 @@ const MESSAGES = {
         password_confirmation: {
             required: 'Confirma tu contraseña nueva.',
             equalTo: 'Las contraseñas no coinciden.',
+        },
+    },
+    'account-delete': {
+        password: {
+            required: 'Ingresa tu contraseña para confirmar la eliminación.',
         },
     },
 };

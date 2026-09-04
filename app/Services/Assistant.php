@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Conversation;
 use App\Models\Message;
+use App\Models\UtcKnowledgeSuggestion;
 use App\Models\User;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
@@ -17,7 +18,24 @@ class Assistant
     public function reply(Conversation $conversation, User $user, string $content): string
     {
         return $this->quickReply->for($content, $user->name)
-            ?? $this->ask($conversation, $user);
+            ?? $this->askAndRecordUtcSuggestion($conversation, $user, $content);
+    }
+
+    private function askAndRecordUtcSuggestion(Conversation $conversation, User $user, string $question): string
+    {
+        $answer = $this->ask($conversation, $user);
+
+        if ($this->quickReply->isUtcQuery($question)) {
+            UtcKnowledgeSuggestion::create([
+                'user_id' => $user->id,
+                'conversation_id' => $conversation->id,
+                'question' => $question,
+                'answer' => $answer,
+                'status' => 'pending',
+            ]);
+        }
+
+        return $answer;
     }
 
     private function ask(Conversation $conversation, User $user): string

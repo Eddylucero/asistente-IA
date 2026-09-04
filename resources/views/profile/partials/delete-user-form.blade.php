@@ -6,7 +6,7 @@
         </p>
     </header>
 
-    <form method="POST" action="{{ route('profile.destroy') }}" class="flex flex-col gap-4" data-confirm-account-delete>
+    <form method="POST" action="{{ route('profile.destroy') }}" class="flex flex-col gap-4" data-validate="account-delete" data-confirm-account-delete novalidate>
         @csrf
         @method('delete')
 

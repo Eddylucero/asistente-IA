@@ -10,8 +10,77 @@ class QuickReply
     {
         $text = $this->normalize($content);
 
-        return $this->calendarReply($text, $name)
+        return $this->utcReply($text)
+            ?? $this->calendarReply($text, $name)
             ?? $this->configuredReply($text, $name);
+    }
+
+    public function isUtcQuery(string $content): bool
+    {
+        return $this->mentions($this->normalize($content), config('psychology.utc.phrases', []));
+    }
+
+    private function utcReply(string $text): ?string
+    {
+        $knowledge = config('psychology.utc', []);
+
+        if (! $this->mentions($text, $knowledge['phrases'] ?? [])) {
+            return null;
+        }
+
+        if ($this->mentions($text, ['rector', 'rectora', 'autoridad'])) {
+            return $knowledge['rector_response'] ?? null;
+        }
+
+        if ($this->mentions($text, ['facultad', 'facultades', 'carrera', 'carreras'])) {
+            return $knowledge['faculties_response'] ?? null;
+        }
+
+        if ($this->mentions($text, ['extension', 'extensiones', 'sedes', 'campus'])
+            && ! $this->mentions($text, ['salache', 'pujili', 'la mana', 'salcedo', 'matriz'])) {
+            return $knowledge['extensions_response'] ?? null;
+        }
+
+        $locations = $knowledge['locations'] ?? [];
+        $maps = $knowledge['maps'] ?? [];
+
+        if ($this->mentions($text, ['pujili', 'universidad en pujili', 'universidad hay en pujili'])) {
+            return 'En Pujilí se encuentra la Extensión Pujilí de la Universidad Técnica de Cotopaxi (UTC). Está ubicada en '.$locations['pujili']."\n\n[[UTC_MAPA_PUJILI]]\n\n[Abrir Extensión Pujilí en Google Maps]({$maps['pujili']})";
+        }
+
+        if ($this->mentions($text, ['salache'])) {
+            return 'El Campus Salache de la UTC está en '.$locations['salache']."\n\n[[UTC_MAPA_SALACHE]]\n\n[Abrir Campus Salache en Google Maps]({$maps['salache']})";
+        }
+
+        if ($this->mentions($text, ['la mana'])) {
+            return 'La UTC tiene una extensión en La Maná, ubicada en '.$locations['la_mana']."\n\n[[UTC_MAPA_LA_MANA]]\n\n[Abrir Extensión La Maná en Google Maps]({$maps['la_mana']})";
+        }
+
+        if ($this->mentions($text, ['salcedo'])) {
+            return 'La UTC tiene un campus en Salcedo, ubicado en '.$locations['salcedo']."\n\n[[UTC_MAPA_SALCEDO]]\n\n[Abrir Campus Salcedo en Google Maps]({$maps['salcedo']})";
+        }
+
+        foreach ($knowledge['cities'] ?? [] as $city => $response) {
+            if ($this->mentions($text, [$city]) && $this->mentions($text, ['universidad', 'utc', 'hay', 'existe'])) {
+                return $response;
+            }
+        }
+
+        if ($this->mentions($text, ['universidad'])
+            && $this->mentions($text, ['hay', 'existe', 'alguna', 'que universidad'])) {
+            return 'Sí. La Universidad Técnica de Cotopaxi (UTC) es la universidad a la que corresponden el Campus La Matriz, el Campus Salache y sus extensiones.';
+        }
+
+        if ($this->mentions($text, ['universidad', 'hay', 'existe', 'sede'])
+            && ! $this->mentions($text, ['latacunga', 'pujili', 'salache', 'la mana', 'salcedo', 'donde queda', 'ubicacion', 'ubicada', 'direccion', 'campus'])) {
+            return 'No tengo registrada una sede de la UTC en la ciudad que mencionas. Las sedes locales disponibles son Latacunga, Pujilí, La Maná y Salcedo.';
+        }
+
+        if ($this->mentions($text, ['donde queda', 'ubicacion', 'ubicada', 'direccion', 'campus'])) {
+            return 'El Campus La Matriz de la UTC está en Latacunga, en '.$locations['matriz']."\n\n[[UTC_MAPA_MATRIZ]]\n\n[Abrir Campus La Matriz en Google Maps]({$maps['matriz']})";
+        }
+
+        return null;
     }
 
     private function normalize(string $content): string

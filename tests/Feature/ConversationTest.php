@@ -5,6 +5,8 @@ namespace Tests\Feature;
 use App\Models\Conversation;
 use App\Models\Message;
 use App\Models\User;
+use App\Models\UtcKnowledgeSuggestion;
+use App\Services\QuickReply;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -40,6 +42,61 @@ class ConversationTest extends TestCase
         ]);
     }
 
+    public function test_utc_questions_are_answered_locally_without_calling_the_ai(): void
+    {
+        $response = app(QuickReply::class)->for('¿Dónde queda la Universidad Técnica de Cotopaxi?', 'Anahi');
+
+        $this->assertNotNull($response);
+        $this->assertStringContainsString('Campus La Matriz', $response);
+        $this->assertStringContainsString('Latacunga', $response);
+    }
+
+    public function test_utc_questions_receive_a_specific_local_answer_and_map_link(): void
+    {
+        $quickReply = app(QuickReply::class);
+
+        $location = $quickReply->for('¿Dónde queda la UTC?', 'Anahi');
+        $pujili = $quickReply->for('¿Hay la UTC en Pujilí?', 'Anahi');
+        $university = $quickReply->for('¿Hay alguna universidad en la UTC?', 'Anahi');
+        $rector = $quickReply->for('¿Quién es el rector de la UTC?', 'Anahi');
+
+        $this->assertStringContainsString('Campus La Matriz', $location);
+        $this->assertStringContainsString('google.com/maps', $location);
+        $this->assertStringContainsString('[[UTC_MAPA_MATRIZ]]', $location);
+        $this->assertStringContainsString('Extensión Pujilí', $pujili);
+        $this->assertStringContainsString('Universidad Técnica de Cotopaxi', $pujili);
+        $this->assertStringContainsString('google.com/maps', $pujili);
+        $this->assertStringContainsString('[[UTC_MAPA_PUJILI]]', $pujili);
+        $this->assertStringContainsString('No tengo registrado', $rector);
+        $this->assertStringContainsString('Universidad Técnica de Cotopaxi', $university);
+        $this->assertNotSame($location, $pujili);
+    }
+
+    public function test_unknown_utc_answers_are_stored_as_pending_knowledge(): void
+    {
+        $suggestion = new UtcKnowledgeSuggestion([
+            'question' => '¿Qué facultades tiene la UTC en una sede nueva?',
+            'answer' => 'Respuesta externa pendiente de revisión.',
+            'status' => 'pending',
+        ]);
+
+        $this->assertSame('pending', $suggestion->status);
+        $this->assertSame('¿Qué facultades tiene la UTC en una sede nueva?', $suggestion->question);
+    }
+
+    public function test_pujili_university_question_gets_a_specific_title_and_summary(): void
+    {
+        $conversation = Conversation::create(['user_id' => User::factory()->create()->id]);
+        Message::create([
+            'conversation_id' => $conversation->id,
+            'role' => 'user',
+            'content' => '¿Qué universidad hay en Pujilí?',
+        ]);
+
+        $this->assertSame('Consulta sobre universidades en Pujilí', $conversation->thematicTitle());
+        $this->assertSame('Consulta sobre la presencia universitaria de la UTC en Pujilí.', $conversation->summary());
+    }
+
     public function test_conversation_title_is_a_thematic_label_instead_of_the_users_message(): void
     {
         $user = User::factory()->create();
@@ -58,6 +115,63 @@ class ConversationTest extends TestCase
             'user_id' => $user->id,
             'title' => 'Me ayudas con mi ansiedad al no poder hacer tareas',
         ]);
+    }
+
+    public function test_conversation_titles_reflect_different_emotional_needs(): void
+    {
+        $user = User::factory()->create();
+        $cases = [
+            'Ya no puedo continuar con esto' => 'Apoyo para seguir adelante',
+            'Mi ex me dejó y no sé qué hacer' => 'Acompañamiento tras una ruptura',
+            'No sé qué hacer con mi vida' => 'Orientación para encontrar un rumbo',
+        ];
+
+        foreach ($cases as $content => $expectedTitle) {
+            $conversation = Conversation::create(['user_id' => $user->id]);
+            $conversation->rememberTitle($content);
+
+            $this->assertSame($expectedTitle, $conversation->fresh()->title);
+        }
+    }
+
+    public function test_history_derives_a_better_title_for_an_old_generic_conversation(): void
+    {
+        $user = User::factory()->create();
+        $conversation = Conversation::create([
+            'user_id' => $user->id,
+            'title' => 'Acompañamiento emocional',
+        ]);
+        Message::create([
+            'conversation_id' => $conversation->id,
+            'role' => 'user',
+            'content' => 'Mi ex me dejó y no sé cómo seguir adelante.',
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('conversations.history'))
+            ->assertOk()
+            ->assertSee('Fuerza para seguir adelante tras una ruptura');
+    }
+
+    public function test_history_summary_changes_with_the_users_conversation_topic(): void
+    {
+        $user = User::factory()->create();
+        $cases = [
+            'No sé qué hacer con mi vida.' => 'Búsqueda de dirección personal y claridad sobre los próximos pasos.',
+            'Me siento muy solo y nadie me entiende.' => 'Sensación de soledad y necesidad de recuperar conexión y apoyo emocional.',
+            'Mi jefe me exige demasiado en el trabajo.' => 'Presiones laborales y búsqueda de equilibrio para afrontar el día a día.',
+        ];
+
+        foreach ($cases as $content => $expectedSummary) {
+            $conversation = Conversation::create(['user_id' => $user->id]);
+            Message::create([
+                'conversation_id' => $conversation->id,
+                'role' => 'user',
+                'content' => $content,
+            ]);
+
+            $this->assertSame($expectedSummary, $conversation->summary());
+        }
     }
 
     public function test_creating_a_new_conversation_does_not_reuse_the_latest_one(): void
