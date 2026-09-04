@@ -10,11 +10,11 @@ class VoiceController extends Controller
 {
     public function index(): View
     {
-        $conversation = auth()->user()->latestConversation();
+        $conversation = auth()->user()->latestConversationOrNull();
 
         return view('voice.index', [
             'conversation' => $conversation,
-            'messages' => $conversation->messages()->oldest()->get(),
+            'messages' => $conversation?->messages()->oldest()->get() ?? collect(),
         ]);
     }
 
@@ -24,7 +24,8 @@ class VoiceController extends Controller
             'content' => ['required', 'string', 'max:5000'],
         ]);
 
-        $conversation = auth()->user()->latestConversation();
+        $conversation = auth()->user()->latestConversationOrNull()
+            ?? auth()->user()->conversations()->create();
 
         $message = $conversation->messages()->create([
             'role' => 'user',

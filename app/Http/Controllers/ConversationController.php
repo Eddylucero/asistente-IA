@@ -18,12 +18,12 @@ class ConversationController extends Controller
 {
     public function index(): View
     {
-        return $this->screen(auth()->user()->latestConversation());
+        return $this->screen(auth()->user()->latestConversationOrNull());
     }
 
-    public function create(): RedirectResponse
+    public function create(): View
     {
-        return redirect()->route('conversations.show', auth()->user()->conversations()->create());
+        return $this->screen(null);
     }
 
     public function show(Conversation $conversation): View
@@ -36,11 +36,28 @@ class ConversationController extends Controller
     public function history(): View
     {
         $conversations = auth()->user()->conversations()
+            ->with('messages')
             ->withCount('messages')
             ->latest('updated_at')
             ->get();
 
-        return view('conversations.history', compact('conversations'));
+        $weekStart = now()->startOfWeek();
+        $weeklySessions = $conversations->filter(
+            fn (Conversation $conversation) => $conversation->updated_at->gte($weekStart)
+        )->count();
+
+        $activity = collect(range(6, 0))->map(function (int $daysAgo) use ($conversations) {
+            $date = now()->subDays($daysAgo);
+
+            return [
+                'label' => $date->isoFormat('dd'),
+                'count' => $conversations->filter(
+                    fn (Conversation $conversation) => $conversation->updated_at->isSameDay($date)
+                )->count(),
+            ];
+        });
+
+        return view('conversations.history', compact('conversations', 'weeklySessions', 'activity'));
     }
 
     public function destroy(Conversation $conversation): RedirectResponse
@@ -60,11 +77,15 @@ class ConversationController extends Controller
         $validated = $request->validate([
             'content' => ['required', 'string', 'max:5000'],
             'conversation_id' => ['nullable', 'integer'],
+            'new_conversation' => ['sometimes', 'boolean'],
         ]);
 
         try {
-            $messages = DB::transaction(function () use ($request, $validated, $assistant) {
-                $conversation = $this->resolve($validated['conversation_id'] ?? null);
+            [$conversation, $messages] = DB::transaction(function () use ($request, $validated, $assistant) {
+                $conversation = $this->resolve(
+                    $validated['conversation_id'] ?? null,
+                    (bool) ($validated['new_conversation'] ?? false)
+                );
 
                 $question = $conversation->messages()->create([
                     'role' => 'user',
@@ -78,7 +99,7 @@ class ConversationController extends Controller
                     'content' => $assistant->reply($conversation, $request->user(), $validated['content']),
                 ]);
 
-                return [$question, $answer];
+                return [$conversation, [$question, $answer]];
             });
         } catch (ConnectionException|RequestException|RuntimeException $exception) {
             report($exception);
@@ -89,22 +110,37 @@ class ConversationController extends Controller
         }
 
         return response()->json([
+            'conversation' => [
+                'id' => $conversation->id,
+                'title' => $conversation->title,
+            ],
             'messages' => collect($messages)->map(fn (Message $message) => $message->toPayload())->values(),
         ]);
     }
 
-    private function screen(Conversation $conversation): View
+    private function screen(?Conversation $conversation): View
     {
         return view('conversations.index', [
             'conversation' => $conversation,
-            'messages' => $conversation->messages()->oldest()->get(),
+            'messages' => $conversation?->messages()->oldest()->get() ?? collect(),
+            'suggestions' => $conversation?->suggestions() ?? [
+                'Me siento cansado',
+                'Estoy muy nervioso',
+                'Necesito calma',
+                'Quiero hablar de ansiedad',
+            ],
         ]);
     }
 
-    private function resolve(?int $id): Conversation
+    private function resolve(?int $id, bool $newConversation = false): Conversation
     {
-        if ($id === null) {
-            return auth()->user()->latestConversation();
+        if ($newConversation) {
+            return auth()->user()->conversations()->create();
+        }
+
+        if ($id === null || $id === 0) {
+            return auth()->user()->latestConversationOrNull()
+                ?? auth()->user()->conversations()->create();
         }
 
         return auth()->user()->conversations()->find($id)

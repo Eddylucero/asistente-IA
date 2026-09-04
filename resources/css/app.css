@@ -185,6 +185,73 @@
 
 /* Estado de error que aplica jquery-validation sobre los inputs */
 @layer components {
+    .message-content p + p {
+        margin-top: 0.75rem;
+    }
+
+    .message-list {
+        margin: 0.75rem 0;
+        padding-left: 1.5rem;
+    }
+
+    .message-list:first-child {
+        margin-top: 0;
+    }
+
+    .message-list:last-child {
+        margin-bottom: 0;
+    }
+
+    .message-list--unordered {
+        list-style-type: disc;
+    }
+
+    .message-list--ordered {
+        list-style-type: decimal;
+    }
+
+    .message-list li + li {
+        margin-top: 0.35rem;
+    }
+
+    .message-table-wrapper {
+        max-width: 100%;
+        margin: 0.75rem 0;
+        overflow-x: auto;
+        border: 1px solid rgb(var(--color-outline-variant) / 0.45);
+        border-radius: 0.75rem;
+    }
+
+    .message-table {
+        width: 100%;
+        min-width: 34rem;
+        border-collapse: collapse;
+        font-size: 0.875rem;
+        line-height: 1.35;
+    }
+
+    .message-table th,
+    .message-table td {
+        padding: 0.65rem 0.75rem;
+        text-align: left;
+        vertical-align: top;
+        border-bottom: 1px solid rgb(var(--color-outline-variant) / 0.3);
+    }
+
+    .message-table th {
+        color: rgb(var(--color-on-primary));
+        font-weight: 600;
+        background: rgb(var(--color-primary));
+    }
+
+    .message-table tbody tr:nth-child(even) {
+        background: rgb(var(--color-surface-container-low));
+    }
+
+    .message-table tbody tr:last-child td {
+        border-bottom: 0;
+    }
+
     .input-invalid {
         @apply border-error ring-2 ring-error/40;
     }

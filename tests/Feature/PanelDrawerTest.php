@@ -96,6 +96,14 @@ class PanelDrawerTest extends TestCase
         $this->assertDoesNotMatchRegularExpression('/<a class="[^"]*bg-primary\/10[^"]*"[^>]*href="[^"]*\/historial"/', $conversation);
     }
 
+    public function test_conversation_view_does_not_expose_the_home_confirmation_trigger(): void
+    {
+        $html = $this->actingAs(User::factory()->create())->get('/conversacion')->getContent();
+
+        $this->assertStringNotContainsString('data-new-conversation', $html);
+        $this->assertStringContainsString('data-start-new-conversation', $html);
+    }
+
     private function aside(string $html): string
     {
         preg_match('/<aside.*?<\/aside>/s', $html, $matches);

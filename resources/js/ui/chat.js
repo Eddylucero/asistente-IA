@@ -14,9 +14,18 @@ function formatInline(value) {
     return value.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
 }
 
+function isTableSeparator(line) {
+    return /^\s*\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)+\|?\s*$/.test(line);
+}
+
+function parseTableRow(line) {
+    return line.trim().replace(/^\||\|$/g, '').split('|').map((cell) => cell.trim());
+}
+
 function formatMarkdown(value) {
     const output = [];
     let listType = null;
+    const lines = escapeHtml(value).split('\n');
 
     const closeList = () => {
         if (listType) {
@@ -25,7 +34,25 @@ function formatMarkdown(value) {
         }
     };
 
-    escapeHtml(value).split('\n').forEach((line) => {
+    for (let index = 0; index < lines.length; index += 1) {
+        const line = lines[index];
+
+        if (lines[index + 1] && line.includes('|') && isTableSeparator(lines[index + 1])) {
+            closeList();
+            const headers = parseTableRow(line);
+            const rows = [];
+            index += 2;
+
+            while (index < lines.length && lines[index].includes('|') && lines[index].trim()) {
+                rows.push(parseTableRow(lines[index]));
+                index += 1;
+            }
+
+            output.push(`<div class="message-table-wrapper"><table class="message-table"><thead><tr>${headers.map((header) => `<th>${formatInline(header)}</th>`).join('')}</tr></thead><tbody>${rows.map((row) => `<tr>${headers.map((_, cellIndex) => `<td>${formatInline(row[cellIndex] || '')}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`);
+            index -= 1;
+            continue;
+        }
+
         const ordered = line.match(/^\s*\d+[.)]\s+(.+)$/);
         const unordered = line.match(/^\s*[-*]\s+(.+)$/);
 
@@ -34,13 +61,13 @@ function formatMarkdown(value) {
 
             if (listType !== nextType) {
                 closeList();
-                output.push(`<${nextType}>`);
+                output.push(`<${nextType} class="message-list ${nextType === 'ol' ? 'message-list--ordered' : 'message-list--unordered'}">`);
                 listType = nextType;
             }
 
             output.push(`<li>${formatInline((ordered || unordered)[1])}</li>`);
 
-            return;
+            continue;
         }
 
         closeList();
@@ -48,11 +75,30 @@ function formatMarkdown(value) {
         if (line.trim()) {
             output.push(`<p>${formatInline(line)}</p>`);
         }
-    });
+    }
 
     closeList();
 
     return output.join('');
+}
+
+function createTypingIndicator() {
+    const wrapper = document.createElement('div');
+
+    wrapper.className = 'flex gap-3 self-start max-w-[85%]';
+    wrapper.dataset.typingIndicator = '';
+    wrapper.setAttribute('aria-label', 'Mente está escribiendo');
+    wrapper.innerHTML = `
+        <div class="hidden md:flex w-8 h-8 rounded-full bg-primary-container text-on-primary-container items-center justify-center shrink-0 mt-1">
+            <span class="material-symbols-outlined text-[18px]">psychiatry</span>
+        </div>
+        <div class="bg-surface-container text-on-surface rounded-2xl rounded-tl-sm shadow-sm px-4 py-3 flex items-center gap-1">
+            <span class="w-2 h-2 rounded-full bg-primary/60 animate-bounce"></span>
+            <span class="w-2 h-2 rounded-full bg-primary/60 animate-bounce [animation-delay:150ms]"></span>
+            <span class="w-2 h-2 rounded-full bg-primary/60 animate-bounce [animation-delay:300ms]"></span>
+        </div>`;
+
+    return wrapper;
 }
 
 function now() {
@@ -67,6 +113,8 @@ export function initChat() {
     }
 
     const { endpoint, conversation, initials } = root.dataset;
+    let conversationId = conversation;
+    let isNewConversation = root.dataset.startNewConversation === 'true';
     const list = root.querySelector('[data-chat-messages]');
     const textarea = root.querySelector('[data-chat-input]');
     const sendButton = root.querySelector('[data-chat-send]');
@@ -113,6 +161,8 @@ export function initChat() {
         sendButton.disabled = true;
         textarea.disabled = true;
         append({ content, role: 'user', time: now() });
+        const typingIndicator = createTypingIndicator();
+        list.appendChild(typingIndicator);
         textarea.value = '';
         resize();
         scrollToEnd();
@@ -125,7 +175,11 @@ export function initChat() {
                     Accept: 'application/json',
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
                 },
-                body: JSON.stringify({ content, conversation_id: Number(conversation) }),
+                body: JSON.stringify({
+                    content,
+                    conversation_id: Number.parseInt(conversationId || '0', 10) || null,
+                    new_conversation: isNewConversation,
+                }),
             });
 
             const data = await response.json();
@@ -134,12 +188,25 @@ export function initChat() {
                 throw new Error(data.message || 'No se pudo enviar el mensaje.');
             }
 
+            if (data.conversation) {
+                conversationId = String(data.conversation.id);
+                isNewConversation = false;
+                root.dataset.conversation = conversationId;
+                root.dataset.startNewConversation = 'false';
+
+                const title = root.querySelector('[data-chat-title]');
+                if (title && data.conversation.title) {
+                    title.textContent = data.conversation.title;
+                }
+            }
+
             data.messages
                 .filter((message) => message.role === 'assistant')
                 .forEach(append);
         } catch (failure) {
             append({ content: failure.message, role: 'assistant', time: now() });
         } finally {
+            typingIndicator.remove();
             textarea.disabled = false;
             sendButton.disabled = false;
             textarea.focus();
@@ -161,12 +228,49 @@ export function initChat() {
 
     sendButton.addEventListener('click', () => send());
 
+    const suggestionToggle = root.querySelector('[data-chat-suggestion-toggle]');
+    const suggestionList = root.querySelector('[data-chat-suggestion-list]');
+
+    const setSuggestionsState = (expanded) => {
+        if (! suggestionToggle || ! suggestionList) {
+            return;
+        }
+
+        suggestionToggle.dataset.expanded = String(expanded);
+        suggestionToggle.setAttribute('aria-expanded', String(expanded));
+        suggestionToggle.style.display = expanded ? 'none' : '';
+        suggestionList.classList.toggle('hidden', ! expanded);
+        suggestionList.classList.toggle('flex', expanded);
+    };
+
+    const toggleSuggestions = () => {
+        const expanded = suggestionToggle?.dataset.expanded === 'true';
+        setSuggestionsState(! expanded);
+    };
+
+    if (suggestionToggle) {
+        suggestionToggle.setAttribute('aria-expanded', 'false');
+        suggestionToggle.addEventListener('click', toggleSuggestions);
+    }
+
+    document.addEventListener('click', (event) => {
+        if (suggestionToggle?.dataset.expanded !== 'true') {
+            return;
+        }
+
+        if (! suggestionToggle.contains(event.target) && ! suggestionList?.contains(event.target)) {
+            setSuggestionsState(false);
+        }
+    });
+
     root.querySelectorAll('[data-chat-suggestion]').forEach((suggestion) => {
-        suggestion.addEventListener('click', () => {
-            suggestion.remove();
-            send(suggestion.textContent.trim());
+        suggestion.addEventListener('click', async () => {
+            setSuggestionsState(false);
+            await send(suggestion.textContent.trim());
         });
     });
+
+    textarea.addEventListener('input', resize);
 
     resize();
     scrollToEnd();

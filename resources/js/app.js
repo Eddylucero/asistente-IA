@@ -17,6 +17,7 @@ import {
     initConversationDeleteConfirm,
     initFlashAlerts,
     initLogoutConfirm,
+    initNewConversationConfirm,
     initResendConfirm,
     toast,
     success,
@@ -37,6 +38,7 @@ $(function () {
     initValidation();
     initFlashAlerts();
     initLogoutConfirm();
+    initNewConversationConfirm();
     initResendConfirm();
     initConversationDeleteConfirm();
     initAccountDeleteConfirm();

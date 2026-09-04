@@ -28,6 +28,28 @@ class ThemeToggleTest extends TestCase
         $response->assertSee('data-theme-toggle', false);
     }
 
+    public function test_the_user_initials_are_shown_in_the_main_header_between_theme_and_logout(): void
+    {
+        $user = User::factory()->create(['name' => 'Ana López']);
+
+        $response = $this->actingAs($user)->get('/inicio');
+
+        $response->assertStatus(200);
+        $response->assertSee('AL', false);
+    }
+
+    public function test_home_has_a_new_conversation_prompt_that_offers_continue_or_create_new(): void
+    {
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user)->get('/inicio');
+
+        $response->assertStatus(200);
+        $response->assertSee('data-new-conversation', false);
+        $response->assertSee('data-continue-label="Continuar con la anterior"', false);
+        $response->assertSee('data-create-label="Crear una nueva"', false);
+    }
+
     public function test_every_layout_applies_the_theme_before_painting(): void
     {
         $user = User::factory()->create();

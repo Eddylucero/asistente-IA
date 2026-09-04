@@ -44,6 +44,11 @@ class User extends Authenticatable
             ?? $this->conversations()->create();
     }
 
+    public function latestConversationOrNull(): ?Conversation
+    {
+        return $this->conversations()->latest('updated_at')->first();
+    }
+
     protected function initials(): Attribute
     {
         return Attribute::get(fn (): string => collect(explode(' ', trim((string) $this->name)))

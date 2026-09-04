@@ -20,7 +20,17 @@
                     Tómate un momento, respira profundo. Este es un lugar sin juicios, diseñado para tu bienestar emocional y tranquilidad mental.
                 </p>
 
-                <a class="group relative inline-flex items-center justify-center gap-3 bg-primary text-on-primary px-8 py-4 rounded-full font-label-md text-label-md transition-all duration-300 hover:bg-primary-container hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/20" href="{{ route('conversations.index') }}">
+                <a
+                    class="group relative inline-flex items-center justify-center gap-3 bg-primary text-on-primary px-8 py-4 rounded-full font-label-md text-label-md transition-all duration-300 hover:bg-primary-container hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/20"
+                    href="{{ route('conversations.index') }}"
+                    data-new-conversation
+                    data-continue-url="{{ route('conversations.index') }}"
+                    data-create-url="{{ route('conversations.create') }}"
+                    data-confirm-title="¿Qué quieres hacer?"
+                    data-confirm-text="Puedes continuar con la conversación anterior o crear una nueva desde cero."
+                    data-continue-label="Continuar con la anterior"
+                    data-create-label="Crear una nueva"
+                >
                     <span>Comenzar conversación</span>
                     <span class="material-symbols-outlined transition-transform duration-300 group-hover:translate-x-1">arrow_forward</span>
                 </a>

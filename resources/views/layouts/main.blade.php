@@ -23,6 +23,14 @@
                 <x-theme-toggle />
 
                 @auth
+                    <div
+                        class="flex h-11 w-11 items-center justify-center rounded-full bg-primary-container text-on-primary-container font-label-md text-label-md shadow-sm ring-2 ring-surface-container-lowest"
+                        title="{{ auth()->user()->name }}"
+                        aria-label="Usuario: {{ auth()->user()->name }}"
+                    >
+                        {{ auth()->user()->initials ?: '?' }}
+                    </div>
+
                     <form method="POST" action="{{ route('logout') }}" data-confirm-logout>
                         @csrf
                         <button class="inline-flex items-center gap-2 pl-4 pr-5 py-2.5 rounded-full bg-surface-container/70 hover:bg-surface-container-high text-on-surface-variant hover:text-on-surface font-label-md text-label-md transition-colors shadow-sm" type="submit">
