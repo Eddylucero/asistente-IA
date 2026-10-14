@@ -64,16 +64,14 @@
 
                         <img
                             alt="Avatar del asistente virtual Lumi"
-                            class="relative h-full w-full object-contain drop-shadow-[0_18px_24px_rgba(0,0,0,0.12)]"
+                            class="relative h-full w-full object-contain drop-shadow-[0_18px_24px_rgba(0,0,0,0.12)] dark:hidden"
                             src="{{ asset('images/mente/inicio.png') }}"
                             decoding="async"
                         />
-                        {{-- Aclara solo las tres líneas de texto integradas en el PNG. --}}
                         <img
-                            alt=""
-                            aria-hidden="true"
-                            class="lumi-hero-caption-contrast pointer-events-none absolute inset-0 hidden h-full w-full object-contain dark:block"
-                            src="{{ asset('images/mente/inicio.png') }}"
+                            alt="Avatar del asistente virtual Lumi"
+                            class="relative hidden h-full w-full object-contain drop-shadow-[0_18px_24px_rgba(0,0,0,0.12)] dark:block"
+                            src="{{ asset('images/mente/inicio-bn.png') }}"
                             decoding="async"
                         />
                     </div>

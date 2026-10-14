@@ -1,4 +1,4 @@
-<x-guest-layout wide :header="'Crea tu cuenta.'" :subheader="'Estamos aquí para escucharte y acompañarte en tu viaje hacia el bienestar emocional.'">
+<x-guest-layout wide :header="'Crea tu cuenta.'" :subheader="'Estamos aquí para escucharte y acompañarte en tu viaje hacia el bienestar emocional.'" :avatar="asset('images/mente/login.png')">
     <x-auth-session-status class="mb-3" :status="session('status')" />
 
     <form method="POST" action="{{ route('register') }}" class="space-y-4 flex flex-col" data-validate="register" novalidate>

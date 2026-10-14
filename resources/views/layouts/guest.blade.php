@@ -2,6 +2,7 @@
     'header' => 'Comenzar',
     'subheader' => 'Crea tu santuario digital personal.',
     'wide' => false,
+    'avatar' => null,
 ])
 <!DOCTYPE html>
 <html lang="es">
@@ -30,7 +31,7 @@
             <div class="hidden lg:flex {{ $wide ? 'lg:w-[42%]' : 'lg:w-1/2' }} h-full items-center justify-center relative">
                 <div class="relative w-full max-w-lg aspect-square">
                     <div class="absolute inset-0 bg-gradient-to-br from-tertiary-fixed/30 to-secondary-fixed/30 rounded-full blur-3xl animate-pulse" style="animation-duration: 8s;"></div>
-                    <img alt="Avatar asistente" class="w-full h-full object-cover rounded-[48px] shadow-[0_30px_60px_rgba(0,0,0,0.08)] relative z-10 transition-transform duration-700 hover:scale-[1.02]" src="{{ config('brand.auth_avatar') }}"/>
+                    <img alt="Avatar asistente" class="w-full h-full object-cover rounded-[48px] shadow-[0_30px_60px_rgba(0,0,0,0.08)] relative z-10 transition-transform duration-700 hover:scale-[1.02]" src="{{ $avatar ?? config('brand.auth_avatar') }}"/>
                     <div class="absolute -left-12 top-1/4 bg-surface-container-lowest/90 backdrop-blur-md p-4 rounded-2xl shadow-xl z-20 flex items-center gap-3 animate-[float_4s_ease-in-out_infinite]">
                         <div class="w-10 h-10 rounded-full bg-secondary-container flex items-center justify-center text-on-secondary-container">
                             <span class="material-symbols-outlined text-xl">psychology</span>

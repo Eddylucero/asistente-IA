@@ -2,6 +2,7 @@ import { createAvatarLoop } from './avatar-loop.js';
 
 const FINISH_HOLD_MS = 450;
 const MODAL_EXIT_MS = 360;
+const VISUAL_PAUSE_MS = 90;
 
 export function speechText(content) {
     return content
@@ -13,31 +14,6 @@ export function speechText(content) {
         .replace(/[*_`|]/g, ' ')
         .replace(/\s+/g, ' ')
         .trim();
-}
-
-export function speechSegments(content) {
-    const phrases = speechText(content).match(/[\s\S]+?(?:[,;:!?…]+|\.+)["'”’)]*(?=\s|$)|[\s\S]+$/g) || [];
-    const segments = [];
-    let pending = '';
-    phrases.forEach((phrase, index) => {
-        pending = `${pending} ${phrase.trim()}`.trim();
-        // Keep common titles attached to the name; decimals are not split.
-        if (/\b(?:Dra?|Sra?|Srta|Lic|Ing|Av|Ud|Uds|etc|aprox)\.$/i.test(pending)
-            && index < phrases.length - 1) return;
-        const chunks = pending.match(/.{1,220}(?:\s|$)|\S{1,220}/g) || [pending];
-        chunks.forEach((chunk, chunkIndex) => {
-            const text = chunk.trim();
-            let pauseMs = 0;
-            if (chunkIndex === chunks.length - 1) {
-                if (/[,]["'”’)]*$/.test(text)) pauseMs = 180;
-                else if (/[;:]["'”’)]*$/.test(text)) pauseMs = 240;
-                else if (/[.!?…]["'”’)]*$/.test(text)) pauseMs = 320;
-            }
-            segments.push({ text, pauseMs });
-        });
-        pending = '';
-    });
-    return segments;
 }
 
 export function initChatSpeech(root) {
@@ -57,7 +33,8 @@ export function initChatSpeech(root) {
     let startTimer;
     let closeTimer;
     let finishTimer;
-    let phraseTimer;
+    let visualPauseTimer;
+    let visualResumeTimer;
     let speaking = false;
     let motionPaused = false;
     let mediaGeneration = 0;
@@ -86,16 +63,21 @@ export function initChatSpeech(root) {
         });
     };
 
-    const setTalkingMotion = (moving) => {
+    const setTalkingMotion = (moving, duration = 120) => {
         if (! speaking || motionPaused === ! moving) return;
         motionPaused = ! moving;
         const currentMedia = mediaGeneration;
         avatars.forEach(({ talking }) => {
-            if (! moving) talking.pauseSmoothly();
-            else talking.resumeSmoothly().catch(() => {
+            if (! moving) talking.pauseSmoothly(duration);
+            else talking.resumeSmoothly(duration).catch(() => {
                 if (currentMedia === mediaGeneration) videoError.hidden = false;
             });
         });
+    };
+
+    const clearVisualPause = () => {
+        clearTimeout(visualPauseTimer);
+        clearTimeout(visualResumeTimer);
     };
 
     const openDialog = () => {
@@ -134,7 +116,7 @@ export function initChatSpeech(root) {
         const current = generation;
         clearTimeout(startTimer);
         clearTimeout(finishTimer);
-        clearTimeout(phraseTimer);
+        clearVisualPause();
         activeUtterance = null;
         synth?.cancel();
         closeDialog(() => {
@@ -150,6 +132,7 @@ export function initChatSpeech(root) {
         activeUtterance = null;
         clearTimeout(startTimer);
         clearTimeout(finishTimer);
+        clearVisualPause();
         stopButton.hidden = true;
         status('Respuesta finalizada');
         setTalkingMotion(false);
@@ -184,74 +167,86 @@ export function initChatSpeech(root) {
 
     const play = (content) => {
         stop();
-        const segments = speechSegments(content);
-        if (! segments.length) return;
+        const text = speechText(content);
+        if (! text) return;
 
         const current = generation;
         stopButton.hidden = false;
         status('Preparando voz...');
 
-        const speakNext = (index) => {
-            if (current !== generation) return;
-            if (index === segments.length) {
-                finish();
-                return;
-            }
+        // A single request lets the voice keep its natural rhythm and prosody.
+        const utterance = new window.SpeechSynthesisUtterance(text);
+        activeUtterance = utterance;
+        const isCurrent = () => current === generation && activeUtterance === utterance;
+        let voicePaused = false;
+        let lastBoundary = -1;
+        const voices = synth.getVoices().filter((voice) => /^es(?:[-_]|$)/i.test(voice.lang));
+        utterance.voice = voices.find((voice) => /^es[-_](EC|MX|US)/i.test(voice.lang))
+            || voices.find((voice) => voice.default) || voices[0] || null;
+        utterance.lang = utterance.voice?.lang || 'es-EC';
+        utterance.rate = 1;
 
-            const utterance = new window.SpeechSynthesisUtterance(segments[index].text);
-            activeUtterance = utterance;
-            const voices = synth.getVoices().filter((voice) => /^es(?:[-_]|$)/i.test(voice.lang));
-            utterance.voice = voices.find((voice) => /^es[-_](EC|MX|US)/i.test(voice.lang))
-                || voices.find((voice) => voice.default) || voices[0] || null;
-            utterance.lang = utterance.voice?.lang || 'es-EC';
-            utterance.rate = 0.95;
-
-            utterance.onstart = () => {
-                if (current !== generation || activeUtterance !== utterance) return;
-                clearTimeout(startTimer);
-                status('Lumi está hablando...');
-                openDialog();
-                if (! speaking) animateAvatars(true);
-                else setTalkingMotion(true);
-            };
-            utterance.onpause = () => {
-                if (current !== generation || activeUtterance !== utterance) return;
-                setTalkingMotion(false);
-                status('Lumi hace una pausa...');
-            };
-            utterance.onresume = () => {
-                if (current !== generation || activeUtterance !== utterance) return;
-                setTalkingMotion(true);
-                status('Lumi está hablando...');
-            };
-            utterance.onend = () => {
-                if (current !== generation || activeUtterance !== utterance) return;
-                clearTimeout(startTimer);
-                activeUtterance = null;
-                if (index === segments.length - 1) {
-                    finish();
-                    return;
-                }
-                setTalkingMotion(false);
-                status('Lumi hace una pausa...');
-                phraseTimer = setTimeout(() => speakNext(index + 1), segments[index].pauseMs);
-            };
-            utterance.onerror = () => {
-                if (current !== generation || activeUtterance !== utterance) return;
-                reportSpeechFailure('No se pudo reproducir la voz. Pulsa Escuchar respuesta para reintentar.');
-            };
-            startTimer = setTimeout(() => {
-                if (current !== generation || activeUtterance !== utterance) return;
-                reportSpeechFailure('Pulsa Escuchar respuesta para iniciar la voz.');
-            }, 8000);
-            try {
-                synth.speak(utterance);
-            } catch {
-                utterance.onerror();
-            }
+        utterance.onstart = () => {
+            if (! isCurrent()) return;
+            clearTimeout(startTimer);
+            status('Lumi está hablando...');
+            openDialog();
+            if (! speaking) animateAvatars(true);
+            else setTalkingMotion(true);
         };
-
-        speakNext(0);
+        utterance.onpause = () => {
+            if (! isCurrent()) return;
+            voicePaused = true;
+            clearVisualPause();
+            setTalkingMotion(false);
+            status('Lumi hace una pausa...');
+        };
+        utterance.onresume = () => {
+            if (! isCurrent()) return;
+            voicePaused = false;
+            clearVisualPause();
+            setTalkingMotion(true);
+            status('Lumi está hablando...');
+        };
+        utterance.onboundary = (event) => {
+            if (! isCurrent() || voicePaused || (event.name && event.name !== 'word')) return;
+            if (! Number.isInteger(event.charIndex) || event.charIndex <= lastBoundary
+                || event.charIndex >= text.length) return;
+            lastBoundary = event.charIndex;
+            clearVisualPause();
+            // A new spoken word always resumes the mouth immediately.
+            setTalkingMotion(true, 60);
+            const word = text.slice(event.charIndex).match(/^\s*(\S+(?:\s*[,;:!?…]+)?)/)?.[1] || '';
+            if (! /[,;:.!?…]["'”’)]*$/.test(word)
+                || /^(?:Dra?|Sra?|Srta|Lic|Ing|Av|Ud|Uds|etc|aprox)\.$/i.test(word)) return;
+            // Approximate the end of this word, then briefly settle only the video.
+            // Voices without word events simply keep the video moving.
+            const wordDuration = Math.min(300, Math.max(100, word.replace(/[^\p{L}]/gu, '').length * 40));
+            visualPauseTimer = setTimeout(() => {
+                if (! isCurrent() || voicePaused) return;
+                setTalkingMotion(false, 40);
+                visualResumeTimer = setTimeout(() => {
+                    if (isCurrent() && ! voicePaused) setTalkingMotion(true, 60);
+                }, VISUAL_PAUSE_MS);
+            }, wordDuration);
+        };
+        utterance.onend = () => {
+            if (! isCurrent()) return;
+            finish();
+        };
+        utterance.onerror = () => {
+            if (current !== generation || activeUtterance !== utterance) return;
+            reportSpeechFailure('No se pudo reproducir la voz. Pulsa Escuchar respuesta para reintentar.');
+        };
+        startTimer = setTimeout(() => {
+            if (current !== generation || activeUtterance !== utterance) return;
+            reportSpeechFailure('Pulsa Escuchar respuesta para iniciar la voz.');
+        }, 8000);
+        try {
+            synth.speak(utterance);
+        } catch {
+            utterance.onerror();
+        }
     };
 
     const preferReading = () => {

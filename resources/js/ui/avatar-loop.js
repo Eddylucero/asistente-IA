@@ -23,9 +23,9 @@ export function createAvatarLoop(layer) {
 
     const cancelMotion = () => window.cancelAnimationFrame(motionFrame);
     const setRate = (rate) => videos.forEach((video) => { video.playbackRate = rate; });
-    const easeRate = (target, after = () => {}) => {
+    const easeRate = (target, after = () => {}, duration = 120) => {
         cancelMotion();
-        if (window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches) {
+        if (duration <= 0 || window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches) {
             setRate(target);
             after();
             return;
@@ -33,7 +33,7 @@ export function createAvatarLoop(layer) {
         const initial = active.playbackRate || 1;
         const start = window.performance.now();
         const step = (now) => {
-            const progress = Math.min(1, (now - start) / 120);
+            const progress = Math.min(1, (now - start) / duration);
             const eased = progress * progress * (3 - 2 * progress);
             setRate(initial + (target - initial) * eased);
             if (progress < 1) motionFrame = window.requestAnimationFrame(step);
@@ -124,15 +124,15 @@ export function createAvatarLoop(layer) {
             return startPlayback();
         },
         pause() { pausePlayback(); },
-        pauseSmoothly() {
+        pauseSmoothly(duration = 120) {
             if (! running) return;
-            easeRate(0.25, () => pausePlayback(true));
+            easeRate(0.25, () => pausePlayback(true), duration);
         },
-        resumeSmoothly() {
+        resumeSmoothly(duration = 120) {
             cancelMotion();
             if (! running) setRate(0.25);
             const playback = startPlayback();
-            easeRate(1);
+            easeRate(1, undefined, duration);
             return playback;
         },
     };

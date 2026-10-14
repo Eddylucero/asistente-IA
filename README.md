@@ -14,14 +14,19 @@ llamadas a la IA.
 ## Características
 
 - **Conversación escrita** con historial persistente y respuestas en Markdown.
+  Lumi responde por defecto en párrafos cortos; reserva las listas para pasos u
+  opciones y las tablas para comparaciones útiles, con extensión acorde a la consulta.
 - **Lectura de respuestas** con TTS en español del navegador y el video
   `public/images/mente/avatar-move.mp4` en un modal centrado mientras Lumi habla.
   El video `saludo-move.mp4` saluda en bucle al entrar y mientras Lumi no habla.
   Ambos videos solapan hasta medio segundo del final y el inicio para suavizar el bucle.
   Al finalizar una respuesta, Lumi mantiene el video durante una breve pausa
   y el cierre suave del modal, sin cancelar el final del audio.
-  La lectura se divide por comas y finales de frase: el robot frena durante cada
-  pausa y retoma el movimiento desde la misma posición cuando continúa la voz.
+  La voz lee la respuesta completa a velocidad normal, con sus pausas naturales.
+  Cuando la voz notifica el avance por palabras, el video hace pausas visuales
+  de 90 ms alrededor de la puntuación y continúa desde la misma posición.
+  Estas pausas visuales son aproximadas y no añaden esperas al audio; con voces
+  que no notifican ese avance, la animación permanece continua.
   Cada respuesta de Lumi incluye «Escuchar respuesta» encima de su hora para
   volver a reproducir ese mensaje. También permite detener la lectura.
   «Mejor leer» cierra el modal, detiene la voz y silencia la lectura automática

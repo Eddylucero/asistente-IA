@@ -147,12 +147,6 @@
 }
 
 @layer utilities {
-    /* La silueta blanca cubre los textos del PNG, conservando los colores del emblema. */
-    .lumi-hero-caption-contrast {
-        filter: brightness(0) invert(1);
-        clip-path: polygon(27% 85%, 77% 85%, 77% 92%, 81% 92%, 81% 96%, 57% 96%, 57% 100%, 46% 100%, 46% 96%, 22% 96%, 22% 92%, 27% 92%);
-    }
-
     /*
         Alto de pantalla que respeta la barra del navegador en movil.
 

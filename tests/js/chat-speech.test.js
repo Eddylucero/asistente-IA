@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { initChatSpeech, speechSegments, speechText } from '../../resources/js/ui/chat-speech.js';
+import { initChatSpeech, speechText } from '../../resources/js/ui/chat-speech.js';
 
 function element() {
     const events = {};
@@ -33,7 +33,9 @@ function setup(supported = true, reducedMotion = true) {
     const frames = new Map();
     let frameId = 0;
     let frameTime = 0;
-    const synth = { cancels: 0, cancel() { this.cancels += 1; }, getVoices: () => [{ lang: 'en-US' }, { lang: 'es-MX' }], speak: (value) => utterances.push(value) };
+    const synth = { cancels: 0, pauseCalls: 0, resumeCalls: 0,
+        cancel() { this.cancels += 1; }, pause() { this.pauseCalls += 1; }, resume() { this.resumeCalls += 1; },
+        getVoices: () => [{ lang: 'en-US' }, { lang: 'es-MX' }], speak: (value) => utterances.push(value) };
     globalThis.window = { speechSynthesis: supported ? synth : undefined,
         SpeechSynthesisUtterance: class { constructor(text) { this.text = text; } }, addEventListener() {}, matchMedia: () => ({ matches: reducedMotion }),
         performance: { now: () => frameTime },
@@ -110,25 +112,17 @@ test('silencing cancels playback, ignores old events and allows manual replay', 
     ui.speech.stop({ immediate: true });
 });
 
-test('long responses read every chunk and errors stop the animation', (t) => {
+test('long responses are read in one continuous request and errors stop the animation', (t) => {
     t.mock.timers.enable({ apis: ['setTimeout'] });
     const ui = setup();
     const text = 'Esta es una respuesta larga. '.repeat(30).trim();
     ui.speech.speak(text);
     ui.video.currentTime = 0.42;
-    const count = speechSegments(text).length;
-    let index = 0;
-    while (index < ui.utterances.length) {
-        const utterance = ui.utterances[index++];
-        utterance.onstart();
-        utterance.onend();
-        if (index < count) {
-            assert.equal(ui.dialog.open, true);
-            t.mock.timers.tick(321);
-        }
-    }
-    assert.ok(ui.utterances.length > 1);
-    assert.equal(ui.utterances.map((value) => value.text).join(' '), text);
+    assert.equal(ui.utterances.length, 1);
+    assert.equal(ui.utterances[0].text, text);
+    assert.equal(ui.utterances[0].rate, 1);
+    ui.utterances[0].onstart();
+    ui.utterances[0].onend();
     assert.equal(ui.video.currentTime, 0.42, 'speech pauses never restart the talking clip');
     ui.speech.speak('Otra respuesta.');
     ui.utterances.at(-1).onerror();
@@ -220,34 +214,44 @@ test('natural completion preserves the last pose throughout the exit and never c
     assert.equal(ui.synth.cancels, cancellations);
 });
 
-test('text pauses preserve all words, decimal numbers and titles', () => {
+test('commas, sentences, decimal numbers and titles stay in the same voice request', (t) => {
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    const ui = setup();
     const text = 'Soy la Dra. Lumi, respira durante 3.5 segundos. ¿Continuamos? Sí.';
-    const segments = speechSegments(text);
-    assert.deepEqual(segments.map((segment) => segment.text), [
-        'Soy la Dra. Lumi,', 'respira durante 3.5 segundos.', '¿Continuamos?', 'Sí.',
-    ]);
-    assert.deepEqual(segments.map((segment) => segment.pauseMs), [180, 320, 320, 320]);
-    assert.equal(segments.map((segment) => segment.text).join(' '), text);
+    ui.speech.speak(text);
+    assert.equal(ui.utterances.length, 1);
+    assert.equal(ui.utterances[0].text, text);
+    assert.equal(ui.utterances[0].rate, 1);
+    ui.utterances[0].onstart();
+    t.mock.timers.tick(60000);
+    assert.equal(ui.utterances.length, 1);
+    assert.equal(ui.video.paused, false, 'no invented pauses when the voice emits no word events');
+    ui.speech.stop({ immediate: true });
 });
 
-test('punctuation pauses the robot without closing the modal and the next phrase resumes its pose', (t) => {
+test('word events briefly pause only the video while the same voice request continues', (t) => {
     t.mock.timers.enable({ apis: ['setTimeout'] });
     const ui = setup();
     ui.speech.speak('Hola, respira con calma.');
     ui.utterances[0].onstart();
     ui.video.currentTime = 0.45;
-    ui.utterances[0].onend();
+    const cancellations = ui.synth.cancels;
+    ui.utterances[0].onboundary({ name: 'word', charIndex: 0 });
+    t.mock.timers.tick(160);
     assert.equal(ui.video.paused, true);
     assert.equal(ui.dialog.open, true);
     assert.equal(ui.greeting.classList.contains('opacity-0'), true);
-    t.mock.timers.tick(179);
+    t.mock.timers.tick(89);
     assert.equal(ui.utterances.length, 1);
+    assert.equal(ui.video.paused, true);
     t.mock.timers.tick(1);
-    assert.equal(ui.utterances.length, 2);
-    ui.utterances[1].onstart();
+    assert.equal(ui.utterances.length, 1);
     assert.equal(ui.video.paused, false);
     assert.equal(ui.video.currentTime, 0.45);
     assert.equal(ui.dialog.open, true);
+    assert.equal(ui.synth.cancels, cancellations);
+    assert.equal(ui.synth.pauseCalls, 0);
+    assert.equal(ui.synth.resumeCalls, 0);
     ui.speech.stop({ immediate: true });
 });
 
@@ -269,16 +273,48 @@ test('native voice pause and resume events also control the robot without restar
     assert.equal(ui.video.paused, true, 'late resume events cannot reactivate a cancelled reply');
 });
 
-test('Mejor leer during a text pause cancels the next scheduled phrase', (t) => {
+test('Mejor leer cancels pending visual timers and prevents late video resumes', (t) => {
     t.mock.timers.enable({ apis: ['setTimeout'] });
     const ui = setup();
     ui.speech.speak('Hola, continuamos después.');
     ui.utterances[0].onstart();
-    ui.utterances[0].onend();
+    ui.utterances[0].onboundary({ name: 'word', charIndex: 0 });
+    t.mock.timers.tick(160);
     ui.preferReading.click();
     t.mock.timers.tick(1000);
     assert.equal(ui.utterances.length, 1);
     assert.equal(ui.dialog.open, false);
+    assert.equal(ui.video.paused, true);
+});
+
+test('the next word cancels a pending visual pause as soon as speech advances', (t) => {
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    const ui = setup();
+    ui.speech.speak('Hola, continuamos hablando.');
+    ui.utterances[0].onstart();
+    ui.utterances[0].onboundary({ name: 'word', charIndex: 0 });
+    t.mock.timers.tick(100);
+    ui.utterances[0].onboundary({ name: 'word', charIndex: 6 });
+    t.mock.timers.tick(1000);
+    assert.equal(ui.video.paused, false);
+    assert.equal(ui.utterances.length, 1);
+    ui.speech.stop({ immediate: true });
+});
+
+test('a native voice pause remains paused even when a visual resume was scheduled', (t) => {
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    const ui = setup();
+    ui.speech.speak('Hola, continuamos hablando.');
+    const utterance = ui.utterances[0];
+    utterance.onstart();
+    utterance.onboundary({ name: 'word', charIndex: 0 });
+    t.mock.timers.tick(160);
+    utterance.onpause();
+    t.mock.timers.tick(1000);
+    assert.equal(ui.video.paused, true);
+    utterance.onresume();
+    assert.equal(ui.video.paused, false);
+    ui.speech.stop({ immediate: true });
 });
 
 test('a new reply cancels an older pending finish without closing the new modal', (t) => {
