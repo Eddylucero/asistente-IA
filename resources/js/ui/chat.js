@@ -1,3 +1,5 @@
+import { initChatSpeech } from './chat-speech';
+
 const ESCAPES = {
     '&': '&amp;',
     '<': '&lt;',
@@ -145,6 +147,7 @@ export function initChat() {
     const list = root.querySelector('[data-chat-messages]');
     const textarea = root.querySelector('[data-chat-input]');
     const sendButton = root.querySelector('[data-chat-send]');
+    const speech = initChatSpeech(root);
 
     const resize = () => {
         textarea.style.height = 'auto';
@@ -165,15 +168,17 @@ export function initChat() {
                 ${isUser ? escapeHtml(initials) : '<span class="material-symbols-outlined text-[18px]">psychiatry</span>'}
             </div>
             <div class="flex flex-col gap-1 ${isUser ? 'items-end' : ''}">
-                <div class="${isUser ? 'bg-primary text-on-primary rounded-tr-sm shadow-md shadow-primary/20' : 'bg-surface-container text-on-surface rounded-tl-sm shadow-sm'} p-4 rounded-2xl">
+                <div class="${isUser ? 'bg-primary text-on-primary rounded-tr-sm shadow-md shadow-primary/20' : 'bg-surface-container text-on-surface rounded-tl-sm shadow-sm'} p-4 rounded-2xl" data-message-role="${isUser ? 'user' : 'assistant'}">
                     <div class="message-content text-body-md font-body-md"></div>
                 </div>
+                ${isUser ? '' : '<button class="self-start inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-label-sm font-label-sm text-primary hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 transition-colors disabled:opacity-50" type="button" data-chat-speech-replay><span class="material-symbols-outlined text-[16px]" aria-hidden="true">volume_up</span>Escuchar respuesta</button>'}
                 <span class="text-label-sm font-label-sm text-on-surface-variant ${isUser ? 'mr-1' : 'ml-1'}">${escapeHtml(time)}</span>
             </div>`;
 
         wrapper.querySelector('.message-content').innerHTML = isUser
             ? escapeHtml(content).replace(/\n/g, '<br>')
             : formatMarkdown(content);
+        if (! isUser) speech.bindResponse(wrapper.querySelector('[data-chat-speech-replay]'), content);
 
         list.appendChild(wrapper);
     };
@@ -186,6 +191,7 @@ export function initChat() {
         }
 
         sendButton.disabled = true;
+        speech.stop();
         textarea.disabled = true;
         append({ content, role: 'user', time: now() });
         const typingIndicator = createTypingIndicator();
@@ -227,9 +233,9 @@ export function initChat() {
                 }
             }
 
-            data.messages
-                .filter((message) => message.role === 'assistant')
-                .forEach(append);
+            const replies = data.messages.filter((message) => message.role === 'assistant');
+            replies.forEach(append);
+            if (replies.length) speech.speak(replies.map((message) => message.content).join('\n'));
         } catch (failure) {
             append({ content: failure.message, role: 'assistant', time: now() });
         } finally {
@@ -242,6 +248,7 @@ export function initChat() {
     };
 
     root.querySelectorAll('[data-message-role="assistant"] .message-content').forEach((node) => {
+        speech.bindResponse(node.parentElement.parentElement.querySelector('[data-chat-speech-replay]'), node.textContent);
         node.innerHTML = formatMarkdown(node.textContent);
     });
 
@@ -296,8 +303,6 @@ export function initChat() {
             await send(suggestion.textContent.trim());
         });
     });
-
-    textarea.addEventListener('input', resize);
 
     resize();
     scrollToEnd();

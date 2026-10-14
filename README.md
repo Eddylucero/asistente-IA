@@ -14,6 +14,20 @@ llamadas a la IA.
 ## Características
 
 - **Conversación escrita** con historial persistente y respuestas en Markdown.
+- **Lectura de respuestas** con TTS en español del navegador y el video
+  `public/images/mente/avatar-move.mp4` en un modal centrado mientras Lumi habla.
+  El video `saludo-move.mp4` saluda en bucle al entrar y mientras Lumi no habla.
+  Ambos videos solapan hasta medio segundo del final y el inicio para suavizar el bucle.
+  Al finalizar una respuesta, Lumi mantiene el video durante una breve pausa
+  y el cierre suave del modal, sin cancelar el final del audio.
+  La lectura se divide por comas y finales de frase: el robot frena durante cada
+  pausa y retoma el movimiento desde la misma posición cuando continúa la voz.
+  Cada respuesta de Lumi incluye «Escuchar respuesta» encima de su hora para
+  volver a reproducir ese mensaje. También permite detener la lectura.
+  «Mejor leer» cierra el modal, detiene la voz y silencia la lectura automática
+  durante la visita; las respuestas se pueden escuchar manualmente con su botón.
+  La voz depende de las voces instaladas en el dispositivo; el video simula el
+  habla sin sincronizar cada palabra con los labios. No requiere una API de TTS.
 - **Modo voz**: dictado por micrófono con la Web Speech API del navegador.
 - **Historial** de conversaciones con borrado individual.
 - **Autenticación completa**: registro, login, Google OAuth y recuperación de
@@ -208,7 +222,7 @@ app/
 └── View/Components/      Layouts como componentes de Blade
 
 config/
-├── brand.php             Imágenes de la interfaz (logo y avatares)
+├── brand.php             Avatares de acceso y de la pantalla de voz
 └── psychology.php        Prompt del sistema, parámetros y respuestas locales
 
 resources/
