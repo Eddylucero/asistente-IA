@@ -110,7 +110,7 @@ function createTypingIndicator() {
 
     wrapper.className = 'flex gap-3 self-start max-w-[85%]';
     wrapper.dataset.typingIndicator = '';
-    wrapper.setAttribute('aria-label', 'Mente está escribiendo');
+    wrapper.setAttribute('aria-label', 'Lumi está escribiendo');
     wrapper.innerHTML = `
         <div class="hidden md:flex w-8 h-8 rounded-full bg-primary-container text-on-primary-container items-center justify-center shrink-0 mt-1">
             <span class="material-symbols-outlined text-[18px]">psychiatry</span>

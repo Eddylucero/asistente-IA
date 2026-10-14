@@ -69,10 +69,10 @@
                 </section>
 
                 <section class="rounded-2xl bg-surface-container-lowest p-stack-md shadow-sm ring-1 ring-outline-variant/10">
-                    <h2 class="text-label-md font-label-md uppercase tracking-widest text-primary">Acerca de Mente</h2>
+                    <h2 class="text-label-md font-label-md uppercase tracking-widest text-primary">Acerca de Lumi</h2>
                     <div class="mt-4 flex items-start gap-3">
                         <span class="material-symbols-outlined text-secondary">info</span>
-                        <p class="text-body-md font-body-md text-on-surface-variant">Mente ofrece acompañamiento conversacional para bienestar emocional. No reemplaza la atención de un profesional.</p>
+                        <p class="text-body-md font-body-md text-on-surface-variant">Lumi ofrece acompañamiento conversacional para bienestar emocional. No reemplaza la atención de un profesional.</p>
                     </div>
                 </section>
             </aside>

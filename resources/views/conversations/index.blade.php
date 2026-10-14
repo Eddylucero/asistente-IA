@@ -9,17 +9,19 @@
     >
         <div class="flex flex-1 h-full max-w-[1400px] mx-auto w-full gap-stack-lg p-stack-md lg:p-stack-lg min-h-0">
 
-            <div class="hidden lg:flex w-[400px] flex-col rounded-3xl bg-surface-container-low shadow-sm relative overflow-hidden flex-shrink-0 group">
+            <div class="hidden lg:flex w-[400px] min-h-0 flex-col rounded-3xl bg-surface-container-low shadow-sm relative overflow-hidden flex-shrink-0">
                 <div class="absolute inset-0 bg-gradient-to-tr from-primary/10 via-transparent to-tertiary-fixed-dim/10 opacity-50 mix-blend-multiply z-10 pointer-events-none"></div>
 
-                <img alt="Asistente Mente escuchando" class="w-full h-full object-cover transition-transform duration-[20s] group-hover:scale-105 ease-out" src="{{ config('brand.avatar') }}"/>
+                <div class="relative flex-1 min-h-0">
+                    <img alt="Asistente Lumi escuchando" class="absolute inset-0 w-full h-full object-contain p-stack-sm" src="{{ asset('images/mente/avatar.png') }}"/>
+                </div>
 
-                <div class="absolute bottom-stack-md left-stack-md right-stack-md bg-surface/90 backdrop-blur-md rounded-xl p-stack-sm flex items-center gap-stack-sm shadow-md z-20">
+                <div class="relative mx-stack-md mb-stack-md shrink-0 bg-surface/90 backdrop-blur-md rounded-xl p-stack-sm flex items-center gap-stack-sm shadow-md z-20">
                     <div class="flex items-center justify-center w-10 h-10 rounded-full bg-primary-container text-on-primary-container shrink-0">
                         <span class="material-symbols-outlined text-[20px] animate-pulse">mic</span>
                     </div>
                     <div class="flex flex-col">
-                        <span class="text-label-md font-label-md text-on-surface">Mente te escucha...</span>
+                        <span class="text-label-md font-label-md text-on-surface">Lumi te escucha...</span>
                         <div class="flex gap-1 items-center h-4 mt-1">
                             <div class="w-1 bg-primary/40 rounded-full h-2 animate-[bounce_1s_infinite_0ms]"></div>
                             <div class="w-1 bg-primary/60 rounded-full h-3 animate-[bounce_1s_infinite_200ms]"></div>
@@ -38,7 +40,7 @@
                         <x-drawer-toggle class="-ml-2" />
 
                         <div class="lg:hidden w-10 h-10 rounded-full overflow-hidden shrink-0">
-                            <img alt="Mente" class="w-full h-full object-cover" src="{{ config('brand.avatar') }}"/>
+                            <img alt="Lumi" class="w-full h-full object-cover" src="{{ asset('images/mente/avatar.png') }}"/>
                         </div>
                         <div>
                             <h2 class="text-lg font-headline-md text-on-surface" data-chat-title>{{ $conversation?->title ?: 'Sesión Actual' }}</h2>
@@ -134,7 +136,7 @@
                     </div>
 
                     <div class="text-center mt-2">
-                        <span class="text-label-sm font-label-sm text-outline">Mente puede cometer errores. Considera verificar información importante.</span>
+                        <span class="text-label-sm font-label-sm text-outline">Lumi puede cometer errores. Considera verificar información importante.</span>
                     </div>
                 </div>
             </div>

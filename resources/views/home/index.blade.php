@@ -48,24 +48,33 @@
             </div>
 
             <div class="hidden md:flex lg:w-1/2 justify-center lg:justify-end items-center relative h-[400px] lg:h-[600px] mt-stack-lg lg:mt-0 z-10 w-full">
-                <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <div class="w-[300px] h-[300px] lg:w-[450px] lg:h-[450px] rounded-full bg-surface-container/50 blur-2xl animate-[spin_20s_linear_infinite]"></div>
-                    <div class="absolute w-[350px] h-[350px] lg:w-[500px] lg:h-[500px] rounded-full border border-primary-fixed-dim/20 scale-90 animate-[ping_3s_cubic-bezier(0,0,0.2,1)_infinite]"></div>
+                <div class="absolute inset-0 flex items-center justify-center pointer-events-none" aria-hidden="true">
+                    <div class="w-[300px] h-[300px] lg:w-[450px] lg:h-[450px] rounded-full bg-primary/10 blur-3xl"></div>
+                    <div class="absolute bottom-8 right-0 w-[200px] h-[200px] lg:w-[300px] lg:h-[300px] rounded-full bg-secondary-container/30 blur-3xl"></div>
                 </div>
 
                 <div class="relative w-[320px] h-[320px] lg:w-[480px] lg:h-[480px] z-20 transition-transform duration-300 ease-out" data-parallax="40">
-                    <div class="w-full h-full relative transition-transform duration-700 hover:scale-105">
-                        <div class="absolute top-10 right-10 text-on-surface p-3 rounded-2xl shadow-lg shadow-on-background/5 animate-[bounce_4s_infinite] flex items-center gap-2 backdrop-blur-md bg-surface/90 z-30">
+                    <div class="group w-full h-full relative transition-transform duration-calm ease-calm motion-safe:hover:-translate-y-1 motion-reduce:transition-none">
+                        <div class="absolute top-8 -right-3 text-on-surface p-3 rounded-2xl shadow-lg shadow-on-background/10 ring-1 ring-outline-variant/30 flex items-center justify-center backdrop-blur-md bg-surface/95 z-30" aria-hidden="true">
                             <span class="material-symbols-outlined text-tertiary-container" style="font-variation-settings: 'FILL' 1;">spa</span>
                         </div>
-                        <div class="absolute bottom-16 left-4 text-on-surface p-3 rounded-2xl shadow-lg shadow-on-background/5 animate-[bounce_5s_infinite_0.5s] flex items-center gap-2 backdrop-blur-md bg-surface/90 z-30">
+                        <div class="absolute bottom-12 -left-3 text-on-surface p-3 rounded-2xl shadow-lg shadow-on-background/10 ring-1 ring-outline-variant/30 flex items-center justify-center backdrop-blur-md bg-surface/95 z-30" aria-hidden="true">
                             <span class="material-symbols-outlined text-secondary" style="font-variation-settings: 'FILL' 1;">favorite</span>
                         </div>
 
                         <img
-                            alt="Avatar del asistente virtual Mente"
-                            class="w-full h-full object-contain drop-shadow-2xl z-20 relative"
-                            src="{{ config('brand.home_avatar') }}"
+                            alt="Avatar del asistente virtual Lumi"
+                            class="relative h-full w-full object-contain drop-shadow-[0_18px_24px_rgba(0,0,0,0.12)]"
+                            src="{{ asset('images/mente/inicio.png') }}"
+                            decoding="async"
+                        />
+                        {{-- Aclara solo las tres líneas de texto integradas en el PNG. --}}
+                        <img
+                            alt=""
+                            aria-hidden="true"
+                            class="lumi-hero-caption-contrast pointer-events-none absolute inset-0 hidden h-full w-full object-contain dark:block"
+                            src="{{ asset('images/mente/inicio.png') }}"
+                            decoding="async"
                         />
                     </div>
                 </div>

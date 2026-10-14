@@ -48,8 +48,8 @@
         </button>
 
         <a class="p-stack-md flex items-center gap-3 mb-stack-lg" href="{{ route('home') }}">
-            <img alt="Mente" class="h-8 w-auto" src="{{ config('brand.logo') }}"/>
-            <span class="font-headline-md text-headline-md text-primary tracking-tight">Mente</span>
+            <img alt="Lumi" class="h-8 w-auto" src="{{ asset('images/mente/logo.png') }}"/>
+            <span class="font-headline-md text-headline-md text-primary tracking-tight">Lumi</span>
         </a>
 
         <nav class="flex-1 px-stack-sm flex flex-col gap-1">

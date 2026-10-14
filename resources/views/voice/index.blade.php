@@ -35,7 +35,7 @@
                 </div>
 
                 <div class="relative h-[min(14rem,32vh)] w-[min(14rem,32vh)] rounded-full bg-surface-container-lowest p-3 shadow-2xl md:h-[min(18rem,40vh)] md:w-[min(18rem,40vh)] md:p-4">
-                    <img alt="Dra. Mente, asistente virtual" class="h-full w-full rounded-full object-cover shadow-inner" src="{{ config('brand.voice_avatar') }}" />
+                    <img alt="Dra. Lumi, asistente virtual" class="h-full w-full rounded-full object-cover shadow-inner" src="{{ config('brand.voice_avatar') }}" />
                     <div class="pointer-events-none absolute inset-0 animate-[spin_20s_linear_infinite] rounded-full border-2 border-dashed border-primary/40"></div>
                 </div>
             </div>

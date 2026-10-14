@@ -93,7 +93,7 @@ class GoogleController extends Controller
                 'icon' => 'success',
                 'toast' => false,
                 'title' => '¡Cuenta creada!',
-                'text' => 'Bienvenido a Mente, '.$user->name.'. Tu santuario digital te espera.',
+                'text' => 'Bienvenido a Lumi, '.$user->name.'. Tu santuario digital te espera.',
             ]
             : [
                 'icon' => 'success',

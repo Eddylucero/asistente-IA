@@ -1,4 +1,4 @@
-# Mente — Asistente Virtual de Apoyo Psicológico
+# Lumi — Asistente Virtual de Apoyo Psicológico
 
 Aplicación web en Laravel que ofrece un espacio de conversación de apoyo emocional.
 El usuario puede escribir con el asistente, hablarle por micrófono y revisar su

@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <link rel="stylesheet" href="../../public/build/assets/app-Byv1KSGF.css">
+    <title>Contraste de Lumi</title>
+    <style>
+        body { margin: 0; padding: 32px; background: #e6e9ee; font-family: sans-serif; }
+        main { display: flex; gap: 24px; }
+        section { padding: 20px; border-radius: 20px; background: #f8f9ff; }
+        section.dark { background: #111418; color: #e1e2e8; }
+        h1 { margin-bottom: 16px; }
+    </style>
+</head>
+<body>
+    <main>
+        <section>
+            <h1>Modo claro</h1>
+            <div class="relative w-[480px] h-[480px]">
+                <img class="relative h-full w-full object-contain" src="../../public/images/mente/inicio.png" alt="Lumi">
+                <img class="lumi-hero-caption-contrast pointer-events-none absolute inset-0 hidden h-full w-full object-contain dark:block" src="../../public/images/mente/inicio.png" alt="" aria-hidden="true">
+            </div>
+        </section>
+        <section class="dark">
+            <h1>Modo oscuro</h1>
+            <div class="relative w-[480px] h-[480px]">
+                <img class="relative h-full w-full object-contain" src="../../public/images/mente/inicio.png" alt="Lumi">
+                <img class="lumi-hero-caption-contrast pointer-events-none absolute inset-0 hidden h-full w-full object-contain dark:block" src="../../public/images/mente/inicio.png" alt="" aria-hidden="true">
+            </div>
+        </section>
+    </main>
+</body>
+</html>

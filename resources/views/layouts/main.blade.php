@@ -15,8 +15,8 @@
     <header class="fixed top-0 w-full z-50 bg-surface-container-lowest/80 backdrop-blur-xl shadow-[0_10px_30px_rgba(0,0,0,0.04)] pt-safe">
         <div class="h-20 max-w-container-max mx-auto px-margin-mobile lg:px-margin-desktop flex items-center justify-between">
             <a class="flex items-center gap-3" href="{{ route('home') }}">
-                <img alt="Mente Logo" class="h-8 w-auto object-contain" src="{{ config('brand.logo') }}"/>
-                <span class="font-headline-md text-headline-md text-primary tracking-tight">Mente</span>
+                <img alt="Lumi Logo" class="h-8 w-auto object-contain" src="{{ asset('images/mente/logo.png') }}" />
+                <span class="font-headline-md text-headline-md text-primary tracking-tight">Lumi</span>
             </a>
 
             <div class="flex items-center gap-2">

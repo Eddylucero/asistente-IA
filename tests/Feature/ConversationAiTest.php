@@ -49,11 +49,12 @@ class ConversationAiTest extends TestCase
         ]);
         $this->assertDatabaseHas('conversations', [
             'id' => $conversation->id,
-            'title' => 'Me siento un poco cansado.',
+            'title' => 'Apoyo para el estrés y el cansancio',
         ]);
         Http::assertSent(fn ($request) => $request->url() === 'https://api.groq.com/openai/v1/chat/completions'
             && collect($request['messages'])->contains(fn ($message) => $message['role'] === 'system'
                 && str_contains($message['content'], $user->name)
+                && str_contains($message['content'], 'Eres Lumi')
                 && str_contains($message['content'], 'Distingue siempre la intención')
                 && str_contains($message['content'], 'quién eres'))
             && collect($request['messages'])->contains(fn ($message) => $message['role'] === 'user'
@@ -141,7 +142,7 @@ class ConversationAiTest extends TestCase
 
         $response->assertOk()->assertJsonPath(
             'messages.1.content',
-            'Soy Mente, tu asistente de apoyo psicológico. Estoy aquí para escucharte y acompañarte; ¿qué te gustaría contarme?'
+            'Soy Lumi, tu asistente de apoyo psicológico. Estoy aquí para escucharte y acompañarte; ¿qué te gustaría contarme?'
         );
         Http::assertNothingSent();
     }

@@ -106,7 +106,7 @@
                 <section
                     class="group relative h-48 w-full overflow-hidden rounded-2xl bg-cover bg-center shadow-sm"
                     style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuC9ThBubqOHu2tHfKhljrTZht0dj7iQlrvBUwoK6wuIghxQD_La9hVWe33JeZP2FCYVeo7pxuI11_j2vp-5OM3IYKq2TDDGW0oaCBOWTzI2XZ-_g1evuUGaS1Qdu5do3nUxlX2sth1beh783XqgAw7eZhmGHDXcGFU782ZYWTasGo73JBf1eGbWFsKqxwW12jdoLrud2PcGHS9Ycj9ImFpSjg8xB2D_NfzFuKj_jjiYd48n-J5T2cU4')"
-                    aria-label="Espacio seguro de Mente"
+                    aria-label="Espacio seguro de Lumi"
                 >
                     <div class="absolute inset-0 bg-gradient-to-t from-surface/90 via-surface/35 to-transparent"></div>
                     <div class="absolute bottom-4 left-4 right-4">
