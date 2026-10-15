@@ -1,4 +1,7 @@
 import { createAvatarLoop } from './avatar-loop.js';
+import { chooseBrowserVoice } from './speech-voices.js';
+import { playLocalSpeech } from './local-speech.js';
+import { initChatGreeting } from './chat-greeting.js';
 
 const FINISH_HOLD_MS = 450;
 const MODAL_EXIT_MS = 360;
@@ -18,18 +21,22 @@ export function speechText(content) {
 
 export function initChatSpeech(root) {
     const synth = window.speechSynthesis;
+    let voicePreference = root.dataset?.ttsVoice || 'auto';
+    const usesLocalVoice = voicePreference.startsWith('piper:');
     const stopButton = root.querySelector('[data-chat-speech-stop]');
     const dialog = root.querySelector('[data-chat-speech-dialog]');
     const readTarget = root.querySelector('[data-chat-messages]');
     const videoError = root.querySelector('[data-chat-video-error]');
     const statuses = root.querySelectorAll('[data-chat-speech-status]');
     const avatars = [...root.querySelectorAll('[data-chat-avatar]')].map((avatar) => ({
+        element: avatar,
         greeting: createAvatarLoop(avatar.querySelector('[data-avatar-greeting]')),
         talking: createAvatarLoop(avatar.querySelector('[data-avatar-talking]')),
     }));
     let enabled = true;
     let generation = 0;
     let activeUtterance = null;
+    let localPlayback = null;
     let startTimer;
     let closeTimer;
     let finishTimer;
@@ -38,6 +45,8 @@ export function initChatSpeech(root) {
     let speaking = false;
     let motionPaused = false;
     let mediaGeneration = 0;
+    let greetingIntro;
+    let preferenceRequest;
 
     const status = (value) => statuses.forEach((node) => { node.textContent = value; });
     const showVideo = (video, visible) => {
@@ -112,12 +121,16 @@ export function initChatSpeech(root) {
     };
 
     const stop = ({ immediate = false, afterClose = null } = {}) => {
+        preferenceRequest?.abort();
+        greetingIntro?.dismiss(true);
         generation += 1;
         const current = generation;
         clearTimeout(startTimer);
         clearTimeout(finishTimer);
         clearVisualPause();
         activeUtterance = null;
+        localPlayback?.cancel();
+        localPlayback = null;
         synth?.cancel();
         closeDialog(() => {
             if (current !== generation) return;
@@ -147,8 +160,15 @@ export function initChatSpeech(root) {
 
     // The greeting runs from entry, even if TTS is unavailable or silenced.
     animateAvatars(false);
+    greetingIntro = initChatGreeting(root, avatars);
+    window.addEventListener('pageshow', (event) => {
+        if (! event.persisted) return;
+        greetingIntro?.dismiss(true);
+        animateAvatars(false);
+        greetingIntro = initChatGreeting(root, avatars);
+    });
 
-    if (! synth || ! window.SpeechSynthesisUtterance) {
+    if (! usesLocalVoice && (! synth || ! window.SpeechSynthesisUtterance)) {
         stopButton.disabled = true;
         status('Tu navegador no admite lectura en voz alta');
         return {
@@ -165,7 +185,7 @@ export function initChatSpeech(root) {
         status(message);
     };
 
-    const play = (content) => {
+    const play = async (content) => {
         stop();
         const text = speechText(content);
         if (! text) return;
@@ -174,15 +194,57 @@ export function initChatSpeech(root) {
         stopButton.hidden = false;
         status('Preparando voz...');
 
+        if (root.dataset?.voiceEndpoint) {
+            const request = new AbortController();
+            preferenceRequest = request;
+            const timeout = setTimeout(() => request.abort(), 4000);
+            try {
+                const response = await fetch(root.dataset.voiceEndpoint, { signal: request.signal, headers: { Accept: 'application/json' }, cache: 'no-store' });
+                if (response.ok) {
+                    const data = await response.json();
+                    if (current === generation && typeof data.voice === 'string') voicePreference = data.voice;
+                }
+            } catch { /* Keep the last confirmed preference if the network is unavailable. */ }
+            finally { clearTimeout(timeout); if (preferenceRequest === request) preferenceRequest = null; }
+            if (current !== generation) return;
+        }
+
+        if (voicePreference.startsWith('piper:')) {
+            startTimer = setTimeout(() => {
+                if (current === generation) reportSpeechFailure('No pude preparar la voz. Pulsa Escuchar respuesta para reintentar.');
+            }, 65000);
+            localPlayback = playLocalSpeech({
+                endpoint: root.dataset.speechEndpoint, voice: voicePreference, text,
+                onStart: () => {
+                    if (current !== generation) return;
+                    clearTimeout(startTimer);
+                    status('Lumi está hablando...');
+                    openDialog();
+                    if (! speaking) animateAvatars(true);
+                    else setTalkingMotion(true);
+                },
+                onEnd: () => { if (current === generation) { localPlayback = null; finish(); } },
+                onError: () => {
+                    if (current === generation) reportSpeechFailure('No se pudo reproducir la voz. Pulsa Escuchar respuesta para reintentar.');
+                },
+                onPause: () => { if (current === generation) setTalkingMotion(false); },
+                onMotion: (moving) => { if (current === generation) setTalkingMotion(moving, moving ? 60 : 40); },
+            });
+            return;
+        }
+
+        if (! synth || ! window.SpeechSynthesisUtterance) {
+            reportSpeechFailure('Esta voz no está disponible en tu navegador. Elige otra voz en el perfil.');
+            return;
+        }
+
         // A single request lets the voice keep its natural rhythm and prosody.
         const utterance = new window.SpeechSynthesisUtterance(text);
         activeUtterance = utterance;
         const isCurrent = () => current === generation && activeUtterance === utterance;
         let voicePaused = false;
         let lastBoundary = -1;
-        const voices = synth.getVoices().filter((voice) => /^es(?:[-_]|$)/i.test(voice.lang));
-        utterance.voice = voices.find((voice) => /^es[-_](EC|MX|US)/i.test(voice.lang))
-            || voices.find((voice) => voice.default) || voices[0] || null;
+        utterance.voice = chooseBrowserVoice(synth, voicePreference);
         utterance.lang = utterance.voice?.lang || 'es-EC';
         utterance.rate = 1;
 

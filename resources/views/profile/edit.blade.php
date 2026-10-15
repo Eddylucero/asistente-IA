@@ -1,8 +1,8 @@
 <x-panel-layout title="Perfil">
     @php
-        $initialModal = $errors->getBag('updatePassword')->any()
+        $initialModal = $errors->getBag('updateVoice')->any() ? 'voice' : ($errors->getBag('updatePassword')->any()
             ? 'password'
-            : ($errors->getBag('userDeletion')->any() ? 'delete' : ($errors->default->any() ? 'information' : ''));
+            : ($errors->getBag('userDeletion')->any() ? 'delete' : ($errors->default->any() ? 'information' : '')));
     @endphp
     <main class="mx-auto flex h-full w-full max-w-[1100px] flex-col gap-stack-lg overflow-y-auto p-stack-md lg:p-margin-desktop" data-profile-initial-modal="{{ $initialModal }}">
         <header class="flex items-center justify-between gap-4">
@@ -11,7 +11,7 @@
                 <div>
                     <span class="text-label-md font-label-md uppercase tracking-widest text-primary">Tu cuenta</span>
                     <h1 class="mt-1 text-headline-md font-headline-md text-on-surface sm:text-3xl">Perfil</h1>
-                    <p class="mt-2 text-body-md font-body-md text-on-surface-variant">Administra tus datos y la seguridad de tu cuenta.</p>
+                    <p class="mt-2 text-body-md font-body-md text-on-surface-variant">Administra tus datos, la voz de Lumi y la seguridad de tu cuenta.</p>
                 </div>
             </div>
             <x-panel-actions />
@@ -29,6 +29,19 @@
                             </span>
                         </span>
                         <span class="material-symbols-outlined shrink-0 text-on-surface-variant transition-transform" data-profile-chevron>chevron_right</span>
+                    </button>
+                </section>
+
+                <section class="overflow-hidden rounded-2xl bg-surface-container-lowest shadow-sm ring-1 ring-outline-variant/10">
+                    <button class="group flex w-full items-center justify-between gap-4 p-stack-md text-left transition hover:bg-surface-container-low" type="button" aria-haspopup="dialog" data-profile-toggle="voice">
+                        <span class="flex min-w-0 items-center gap-3">
+                            <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-surface-container text-primary"><span class="material-symbols-outlined">record_voice_over</span></span>
+                            <span class="flex min-w-0 flex-col">
+                                <span class="text-body-lg font-label-md text-on-surface">Voz de Lumi</span>
+                                <span class="text-label-sm text-on-surface-variant">Elige una voz y escucha una muestra</span>
+                            </span>
+                        </span>
+                        <span class="material-symbols-outlined text-on-surface-variant">chevron_right</span>
                     </button>
                 </section>
 
@@ -88,6 +101,17 @@
             <button class="flex h-10 w-10 items-center justify-center rounded-full text-on-surface-variant hover:bg-surface-container-highest" type="button" aria-label="Cerrar" data-profile-close><span class="material-symbols-outlined">close</span></button>
         </div>
         <div class="p-stack-md">@include('profile.partials.update-profile-information-form')</div>
+    </dialog>
+
+    <dialog class="profile-modal w-[min(92vw,640px)] max-w-none rounded-2xl bg-surface p-0 text-on-surface shadow-2xl backdrop:bg-on-surface/35 backdrop:backdrop-blur-sm" data-profile-modal="voice" aria-labelledby="voice-preferences-title">
+        <div class="flex items-center justify-between border-b border-outline-variant/20 px-stack-md py-4">
+            <div>
+                <h2 id="voice-preferences-title" class="text-headline-md font-headline-md">Voz de Lumi</h2>
+                <p class="text-label-md text-on-surface-variant">Encuentra la voz con la que te sientas más a gusto.</p>
+            </div>
+            <button class="flex h-10 w-10 items-center justify-center rounded-full text-on-surface-variant hover:bg-surface-container-highest" type="button" aria-label="Cerrar" data-profile-close><span class="material-symbols-outlined">close</span></button>
+        </div>
+        <div class="p-stack-md">@include('profile.partials.update-voice-form')</div>
     </dialog>
 
     <dialog class="profile-modal w-[min(92vw,640px)] max-w-none rounded-2xl bg-surface p-0 text-on-surface shadow-2xl backdrop:bg-on-surface/35 backdrop:backdrop-blur-sm" data-profile-modal="password">

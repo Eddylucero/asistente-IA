@@ -202,6 +202,48 @@ La pantalla de voz usa la Web Speech API, disponible en Chrome y Edge. El navega
 solo la habilita en `localhost` o sobre HTTPS. En Firefox el botón aparece
 deshabilitado con un aviso.
 
+### Voces locales de Lumi
+
+En **Perfil → Voz de Lumi** se puede escuchar una muestra, elegir una voz y guardar
+la preferencia en la cuenta. El chat usa esa elección para leer las respuestas.
+La opción automática utiliza Daniela si está instalada y, en caso contrario,
+una voz en español del navegador.
+
+Las voces locales usan [Piper](https://github.com/OHF-Voice/piper1-gpl), un motor
+neuronal que ejecuta la síntesis en el servidor, sin claves de API ni servicios
+externos para convertir el texto a audio. Requieren Python 3.9 o superior
+(esta instalación se comprobó con Python 3.13 en Windows).
+
+Instalación en PowerShell desde la carpeta del proyecto:
+
+```powershell
+python -m venv .venv-tts
+./.venv-tts/Scripts/python.exe -m pip install -r scripts/tts/requirements.txt
+New-Item -ItemType Directory -Path storage/app/private/tts/models -Force
+./.venv-tts/Scripts/python.exe -m piper.download_voices es_AR-daniela-high es_MX-claude-high es_ES-davefx-medium --data-dir storage/app/private/tts/models
+php artisan migrate
+```
+
+En Linux/macOS, los comandos del entorno utilizan `.venv-tts/bin/python`.
+La ruta se detecta automáticamente; `TTS_PYTHON` permite indicar otro ejecutable.
+Hay que repetir la instalación del motor y los modelos al desplegar en otro
+servidor: el entorno y los modelos no forman parte del repositorio.
+
+Voces incluidas: Daniela (Argentina), Claude (México) y Dave (España).
+Los modelos proceden del [catálogo de Piper](https://huggingface.co/rhasspy/piper-voices);
+sus fichas `MODEL_CARD` incluyen las licencias y la procedencia de cada voz.
+Piper se distribuye bajo GPL-3.0. También se muestran las voces en español del
+navegador, que pueden variar según el dispositivo.
+
+El motor local arranca automáticamente y reutiliza los modelos cargados entre
+lecturas. Se cierra después de diez minutos sin uso; la primera lectura tras
+ese cierre necesita cargar la voz otra vez. Solo escucha en la interfaz local
+y sus peticiones requieren una credencial interna del servidor.
+El audio se genera en memoria y se devuelve como WAV sin almacenamiento ni
+caché de respuestas. La animación del robot detecta silencios del audio local;
+no añade pausas a la lectura. Si el navegador bloquea la reproducción automática,
+se puede iniciar con **Escuchar respuesta**.
+
 ---
 
 ## Pruebas

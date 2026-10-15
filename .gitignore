@@ -1,6 +1,8 @@
 # Dependencias
 /node_modules
 /vendor
+/.venv-tts
+__pycache__/
 
 # Configuración local y secretos
 .env

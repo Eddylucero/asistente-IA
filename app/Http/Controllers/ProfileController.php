@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ProfileUpdateRequest;
+use App\Services\LocalSpeech;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -12,7 +13,22 @@ class ProfileController extends Controller
 {
     public function edit(Request $request): View
     {
-        return view('profile.edit', ['user' => $request->user()]);
+        return view('profile.edit', ['user' => $request->user(), 'localVoices' => app(LocalSpeech::class)->voices()]);
+    }
+
+    public function updateVoice(Request $request): RedirectResponse
+    {
+        $validated = $request->validateWithBag('updateVoice', [
+            'tts_voice' => ['bail', 'required', 'string', 'max:512', function ($attribute, $value, $fail) {
+                if ($value !== 'auto' && ! preg_match('/^browser:[^\x00-\x1F]+$/u', $value)
+                    && ! array_key_exists($value, config('speech.voices', []))) {
+                    $fail('Elige una voz disponible.');
+                }
+            }],
+        ]);
+        $request->user()->update(['tts_voice' => $validated['tts_voice'] === 'auto' ? null : $validated['tts_voice']]);
+
+        return redirect()->route('profile.edit')->with('swal', ['icon' => 'success', 'title' => 'Voz de Lumi actualizada']);
     }
 
     public function update(ProfileUpdateRequest $request): RedirectResponse

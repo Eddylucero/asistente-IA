@@ -16,7 +16,7 @@ function element() {
     };
 }
 
-function setup(supported = true, reducedMotion = true) {
+function setup(supported = true, reducedMotion = true, dataset = {}) {
     const stop = element(), status = element();
     const preferReading = element(), readTarget = element(), videoError = element();
     const dialog = Object.assign(element(), { open: false, showModal() { this.open = true; }, close() { this.open = false; } });
@@ -30,6 +30,7 @@ function setup(supported = true, reducedMotion = true) {
     const talkingLayer = layer(video), greetingLayer = layer(greeting);
     video.classList.add('opacity-0');
     const utterances = [];
+    const pageEvents = {};
     const frames = new Map();
     let frameId = 0;
     let frameTime = 0;
@@ -37,7 +38,7 @@ function setup(supported = true, reducedMotion = true) {
         cancel() { this.cancels += 1; }, pause() { this.pauseCalls += 1; }, resume() { this.resumeCalls += 1; },
         getVoices: () => [{ lang: 'en-US' }, { lang: 'es-MX' }], speak: (value) => utterances.push(value) };
     globalThis.window = { speechSynthesis: supported ? synth : undefined,
-        SpeechSynthesisUtterance: class { constructor(text) { this.text = text; } }, addEventListener() {}, matchMedia: () => ({ matches: reducedMotion }),
+        SpeechSynthesisUtterance: class { constructor(text) { this.text = text; } }, addEventListener(name, callback) { pageEvents[name] = callback; }, matchMedia: () => ({ matches: reducedMotion }),
         performance: { now: () => frameTime },
         requestAnimationFrame(callback) { frames.set(++frameId, callback); return frameId; },
         cancelAnimationFrame(id) { frames.delete(id); },
@@ -46,6 +47,7 @@ function setup(supported = true, reducedMotion = true) {
     const selectors = { '[data-chat-speech-stop]': stop,
         '[data-chat-speech-dialog]': dialog, '[data-chat-messages]': readTarget, '[data-chat-video-error]': videoError };
     const root = {
+        dataset,
         querySelector: (selector) => selectors[selector],
         querySelectorAll: (selector) => selector === '[data-chat-speech-status]' ? [status]
             : selector === '[data-chat-prefer-reading]' ? [preferReading]
@@ -63,11 +65,24 @@ function setup(supported = true, reducedMotion = true) {
         frames.clear();
         callbacks.forEach((callback) => callback(time));
     };
-    return { speech, createReplay, stop, status, video, greeting, dialog, preferReading, readTarget, videoError, utterances, synth, advanceFrame };
+    return { speech, createReplay, stop, status, video, greeting, dialog, preferReading, readTarget, videoError, utterances, synth, advanceFrame, pageEvents };
 }
 
 test('reads link labels and table contents without URLs, map markers or Markdown', () => {
     assert.equal(speechText('**Hola**\n- Visita [la UTC](https://utc.edu.ec).\n[[UTC_MAPA_MATRIZ]]\n| Sede | Ciudad |\n| --- | --- |\n| Matriz | Latacunga |'), 'Hola Visita la UTC. Sede Ciudad Matriz Latacunga');
+});
+
+test('returning from browser history resumes greeting videos after page suspension', () => {
+    const ui = setup();
+    ui.pageEvents.pagehide();
+    assert.equal(ui.greeting.paused, true);
+    ui.pageEvents.pageshow({ persisted: true });
+    assert.equal(ui.greeting.paused, false);
+    assert.equal(ui.greeting.plays, 2);
+    assert.equal(ui.video.paused, true);
+    ui.pageEvents.pageshow({ persisted: false });
+    assert.equal(ui.greeting.plays, 2, 'a new page already initializes its greeting once');
+    ui.speech.stop({ immediate: true });
 });
 
 test('greets on entry, shows talking video in the modal during speech and resumes the greeting', async (t) => {
@@ -347,4 +362,54 @@ test('Mejor leer cancels the voice immediately and restores focus after the exit
     assert.equal(ui.dialog.open, false);
     assert.equal(ui.readTarget.focused, true);
     assert.equal(ui.video.paused, true);
+});
+
+test('local speech works without browser TTS and Mejor leer cancels pending synthesis', async (t) => {
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    const ui = setup(false, true, { ttsVoice: 'piper:es_MX-claude-high', speechEndpoint: '/voz/sintesis' });
+    document.querySelector = () => ({ content: 'csrf' });
+    let request;
+    let resolveFetch;
+    t.mock.method(globalThis, 'fetch', (_url, options) => {
+        request = options;
+        return new Promise((resolve) => { resolveFetch = resolve; });
+    });
+    ui.speech.speak('**Hola**, ¿cómo estás?');
+    assert.deepEqual(JSON.parse(request.body), { text: 'Hola , ¿cómo estás?', voice: 'piper:es_MX-claude-high' });
+    assert.equal(ui.createReplay('Hola').disabled, false);
+    ui.preferReading.click();
+    assert.equal(request.signal.aborted, true);
+    resolveFetch({ ok: true, blob: async () => new Blob(['wav']) });
+    await new Promise((resolve) => setImmediate(resolve));
+    t.mock.timers.tick(70000);
+    assert.equal(ui.dialog.open, false);
+    assert.equal(ui.video.plays, 0);
+    assert.equal(ui.greeting.paused, false);
+    assert.equal(ui.utterances.length, 0);
+});
+
+test('local audio opens the robot modal and preserves its pose at natural completion', async (t) => {
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    const ui = setup(false, false, { ttsVoice: 'piper:es_AR-daniela-high', speechEndpoint: '/voz/sintesis' });
+    document.querySelector = () => ({ content: 'csrf' });
+    let audio;
+    window.Audio = class {
+        constructor() { audio = this; }
+        play() { this.onplaying(); return Promise.resolve(); }
+        pause() { this.onpause?.(); }
+    };
+    t.mock.method(globalThis, 'fetch', async () => ({ ok: true, blob: async () => new Blob(['wav']) }));
+    ui.speech.speak('Hola.');
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.equal(ui.dialog.open, true);
+    assert.equal(ui.video.paused, false);
+    audio.onended();
+    ui.advanceFrame(150);
+    assert.equal(ui.video.paused, true);
+    t.mock.timers.tick(450);
+    assert.equal(ui.dialog.classList.contains('is-closing'), true);
+    assert.equal(ui.video.classList.contains('opacity-0'), false);
+    t.mock.timers.tick(360);
+    assert.equal(ui.dialog.open, false);
+    assert.equal(ui.greeting.paused, false);
 });

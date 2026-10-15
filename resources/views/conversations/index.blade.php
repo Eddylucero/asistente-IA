@@ -6,11 +6,16 @@
         data-conversation="{{ $conversation?->id ?? '' }}"
         data-start-new-conversation="{{ $conversation ? 'false' : 'true' }}"
         data-initials="{{ auth()->user()->initials }}"
+        data-tts-voice="{{ auth()->user()->tts_voice ?: app(\App\Services\LocalSpeech::class)->defaultVoice() }}"
+        data-speech-endpoint="{{ route('speech.store') }}"
+        data-voice-endpoint="{{ route('speech.preference') }}"
     >
         <div class="flex flex-1 h-full max-w-[1400px] mx-auto w-full gap-stack-lg p-stack-md lg:p-stack-lg min-h-0">
 
             <div class="hidden lg:flex w-[400px] min-h-0 flex-col rounded-3xl bg-[#ECECE5] shadow-sm relative overflow-hidden flex-shrink-0">
-                <x-chat-avatar class="flex-1 min-h-0" />
+                <div class="relative flex-1 min-h-0 overflow-hidden rounded-t-3xl" data-chat-greeting-home>
+                    <x-chat-avatar class="absolute inset-0 w-full h-full" />
+                </div>
 
                 <div class="relative mx-stack-md mb-stack-md shrink-0 bg-surface/90 backdrop-blur-md rounded-xl p-stack-sm flex items-center gap-stack-sm shadow-md z-20">
                     <div class="flex items-center justify-center w-10 h-10 rounded-full bg-primary-container text-on-primary-container shrink-0">
@@ -28,7 +33,9 @@
                     <div class="flex items-center gap-2 sm:gap-3">
                         <x-drawer-toggle class="-ml-2" />
 
-                        <x-chat-avatar class="lg:hidden w-10 h-10 rounded-full overflow-hidden shrink-0 bg-[#ECECE5]" fit="object-cover" />
+                        <div class="relative lg:hidden w-10 h-10 rounded-full overflow-hidden shrink-0 bg-[#ECECE5]" data-chat-greeting-home>
+                            <x-chat-avatar class="absolute inset-0 w-full h-full" fit="object-cover" />
+                        </div>
                         <div>
                             <h2 class="text-lg font-headline-md text-on-surface" data-chat-title>{{ $conversation?->title ?: 'Sesión Actual' }}</h2>
                             <span class="text-label-sm font-label-sm text-primary flex items-center gap-1">
@@ -139,6 +146,17 @@
                 </div>
             </div>
         </div>
+
+        <dialog class="chat-greeting-dialog" data-chat-greeting-dialog aria-labelledby="chat-greeting-title">
+            <div class="chat-greeting-scrim" data-chat-greeting-scrim aria-hidden="true"></div>
+            <div class="chat-greeting-stage" data-chat-greeting-stage>
+                <video data-chat-greeting-video src="{{ asset('images/mente/saludo-move.mp4') }}" muted loop playsinline preload="auto" aria-hidden="true"></video>
+                <div class="chat-greeting-copy" data-chat-greeting-copy>
+                    <h2 class="text-headline-sm font-headline-sm" id="chat-greeting-title">¡Hola! Soy Lumi</h2>
+                    <p class="mt-1 text-body-md">Estoy aquí para acompañarte.</p>
+                </div>
+            </div>
+        </dialog>
 
         <dialog class="chat-speech-dialog" data-chat-speech-dialog aria-labelledby="chat-speech-title" aria-describedby="chat-speech-description">
             <div class="relative flex flex-col items-center p-5 sm:p-7">

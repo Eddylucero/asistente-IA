@@ -10,6 +10,7 @@ import { initPasswordToggles } from './ui/password';
 import { initTheme, toggleTheme } from './ui/theme';
 import { initValidation } from './ui/validation';
 import { initVoice } from './ui/voice';
+import { initVoicePreferences } from './ui/voice-preferences';
 import {
     initAccountDeleteConfirm,
     initConversationDeleteConfirm,
@@ -42,4 +43,5 @@ $(function () {
     initAccountDeleteConfirm();
     initChat();
     initVoice();
+    initVoicePreferences();
 });

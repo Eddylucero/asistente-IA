@@ -1,4 +1,5 @@
 import { initChatSpeech } from './chat-speech';
+import { initChatMaps, utcMapCard } from './chat-maps.js';
 
 const ESCAPES = {
     '&': '&amp;',
@@ -24,19 +25,6 @@ function isTableSeparator(line) {
 
 function parseTableRow(line) {
     return line.trim().replace(/^\||\|$/g, '').split('|').map((cell) => cell.trim());
-}
-
-function utcMapCard(location) {
-    const maps = {
-        MATRIZ: ['Campus La Matriz', 'Universidad+Tecnica+de+Cotopaxi+Campus+Matriz+Latacunga'],
-        SALACHE: ['Campus Salache', 'Universidad+Tecnica+de+Cotopaxi+Campus+Salache'],
-        PUJILI: ['Extensión Pujilí', 'Universidad+Tecnica+de+Cotopaxi+Extension+Pujili'],
-        LA_MANA: ['Extensión La Maná', 'Universidad+Tecnica+de+Cotopaxi+Extension+La+Mana'],
-        SALCEDO: ['Campus Salcedo', 'Universidad+Tecnica+de+Cotopaxi+Campus+Salcedo'],
-    };
-    const [title, query] = maps[location] || maps.MATRIZ;
-
-    return `<div class="message-map-card"><iframe title="Mapa de ${title} de la UTC" loading="lazy" src="https://www.google.com/maps?q=${query}&output=embed"></iframe></div>`;
 }
 
 function formatMarkdown(value) {
@@ -148,6 +136,7 @@ export function initChat() {
     const textarea = root.querySelector('[data-chat-input]');
     const sendButton = root.querySelector('[data-chat-send]');
     const speech = initChatSpeech(root);
+    initChatMaps(root);
 
     const resize = () => {
         textarea.style.height = 'auto';

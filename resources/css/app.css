@@ -278,6 +278,66 @@
 }
 
 /* Keyframes usados por las utilidades arbitrarias animate-[float_...] y animate-[shimmer_...] */
+.chat-greeting-dialog {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    max-height: none;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    border: 0;
+    background: transparent;
+    color: #0d1c2e;
+}
+
+.chat-greeting-dialog::backdrop {
+    background: transparent;
+}
+
+.chat-greeting-scrim {
+    position: absolute;
+    inset: 0;
+    background: rgb(0 0 0 / 0.22);
+    backdrop-filter: blur(6px);
+}
+
+.chat-greeting-stage {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: min(26rem, calc(100vw - 3rem));
+    height: min(58dvh, 26rem);
+    transform: translate(-50%, -50%);
+    overflow: hidden;
+    border-radius: 28px;
+    background: #ECECE5;
+    box-shadow: 0 24px 80px rgb(0 0 0 / 0.2);
+}
+
+.chat-greeting-copy {
+    position: absolute;
+    bottom: 1rem;
+    left: 1rem;
+    right: 1rem;
+    z-index: 2;
+    padding: 0.75rem;
+    border-radius: 1rem;
+    background: rgb(236 236 229 / 0.92);
+    text-align: center;
+    pointer-events: none;
+}
+
+.chat-greeting-stage > [data-chat-greeting-video] {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
 .chat-speech-dialog {
     position: fixed;
     inset: 0;

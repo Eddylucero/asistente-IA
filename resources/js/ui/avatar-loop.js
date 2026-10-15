@@ -118,6 +118,12 @@ export function createAvatarLoop(layer) {
 
     return {
         element: layer,
+        seek(time) {
+            pausePlayback();
+            if (Number.isFinite(time)) {
+                try { active.currentTime = Number.isFinite(active.duration) && active.duration > 0 ? time % active.duration : time; } catch {}
+            }
+        },
         play() {
             cancelMotion();
             setRate(1);

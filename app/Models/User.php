@@ -18,6 +18,7 @@ class User extends Authenticatable
         'password',
         'google_id',
         'avatar',
+        'tts_voice',
     ];
 
     protected $hidden = [
