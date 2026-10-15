@@ -2,6 +2,8 @@ import { createAvatarLoop } from './avatar-loop.js';
 import { chooseBrowserVoice } from './speech-voices.js';
 import { playLocalSpeech } from './local-speech.js';
 import { initChatGreeting } from './chat-greeting.js';
+import { preparedVoicePreference } from './speech-preload.js';
+import { showLoader, hideLoader } from './loader.js';
 
 const FINISH_HOLD_MS = 450;
 const MODAL_EXIT_MS = 360;
@@ -23,7 +25,6 @@ export function initChatSpeech(root) {
     const synth = window.speechSynthesis;
     let voicePreference = root.dataset?.ttsVoice || 'auto';
     const usesLocalVoice = voicePreference.startsWith('piper:');
-    const stopButton = root.querySelector('[data-chat-speech-stop]');
     const dialog = root.querySelector('[data-chat-speech-dialog]');
     const readTarget = root.querySelector('[data-chat-messages]');
     const videoError = root.querySelector('[data-chat-video-error]');
@@ -33,7 +34,6 @@ export function initChatSpeech(root) {
         greeting: createAvatarLoop(avatar.querySelector('[data-avatar-greeting]')),
         talking: createAvatarLoop(avatar.querySelector('[data-avatar-talking]')),
     }));
-    let enabled = true;
     let generation = 0;
     let activeUtterance = null;
     let localPlayback = null;
@@ -47,6 +47,32 @@ export function initChatSpeech(root) {
     let mediaGeneration = 0;
     let greetingIntro;
     let preferenceRequest;
+    let pendingReady;
+    let pendingUnavailable;
+    let loadingButton;
+    const audioCache = new Map();
+
+    const completePreparation = (started = false) => {
+        if (loadingButton) {
+            const button = loadingButton;
+            loadingButton = null;
+            hideLoader();
+            button.disabled = false;
+            button.removeAttribute('aria-busy');
+        }
+        const complete = started ? pendingReady : pendingUnavailable;
+        pendingReady = null;
+        pendingUnavailable = null;
+        complete?.();
+    };
+
+    const showButtonLoading = (button) => {
+        if (! button) return;
+        loadingButton = button;
+        button.disabled = true;
+        button.setAttribute('aria-busy', 'true');
+        showLoader();
+    };
 
     const status = (value) => statuses.forEach((node) => { node.textContent = value; });
     const showVideo = (video, visible) => {
@@ -132,21 +158,21 @@ export function initChatSpeech(root) {
         localPlayback?.cancel();
         localPlayback = null;
         synth?.cancel();
+        completePreparation();
         closeDialog(() => {
             if (current !== generation) return;
             returnToGreeting();
             afterClose?.();
         }, immediate);
-        stopButton.hidden = true;
     };
 
     const finish = () => {
+        completePreparation();
         const current = generation;
         activeUtterance = null;
         clearTimeout(startTimer);
         clearTimeout(finishTimer);
         clearVisualPause();
-        stopButton.hidden = true;
         status('Respuesta finalizada');
         setTalkingMotion(false);
         // Let final audio settle and keep the last pose visible through the exit.
@@ -169,10 +195,9 @@ export function initChatSpeech(root) {
     });
 
     if (! usesLocalVoice && (! synth || ! window.SpeechSynthesisUtterance)) {
-        stopButton.disabled = true;
         status('Tu navegador no admite lectura en voz alta');
         return {
-            speak() {}, stop() {},
+            speak(_content, { onUnavailable } = {}) { onUnavailable?.(); }, stop() {},
             bindResponse(button) {
                 button.disabled = true;
                 button.title = 'Tu navegador no admite lectura en voz alta';
@@ -185,16 +210,22 @@ export function initChatSpeech(root) {
         status(message);
     };
 
-    const play = async (content) => {
+    const play = async (content, { onReady, onUnavailable, button } = {}) => {
         stop();
+        pendingReady = onReady;
+        pendingUnavailable = onUnavailable;
         const text = speechText(content);
-        if (! text) return;
+        if (! text) { completePreparation(); return; }
 
         const current = generation;
-        stopButton.hidden = false;
+        showButtonLoading(button);
         status('Preparando voz...');
 
-        if (root.dataset?.voiceEndpoint) {
+        const preparedPreference = root.dataset?.voiceEndpoint ? await preparedVoicePreference() : null;
+        if (current !== generation) return;
+        if (preparedPreference) voicePreference = preparedPreference;
+
+        if (root.dataset?.voiceEndpoint && ! preparedPreference) {
             const request = new AbortController();
             preferenceRequest = request;
             const timeout = setTimeout(() => request.abort(), 4000);
@@ -214,10 +245,11 @@ export function initChatSpeech(root) {
                 if (current === generation) reportSpeechFailure('No pude preparar la voz. Pulsa Escuchar respuesta para reintentar.');
             }, 65000);
             localPlayback = playLocalSpeech({
-                endpoint: root.dataset.speechEndpoint, voice: voicePreference, text,
+                endpoint: root.dataset.speechEndpoint, voice: voicePreference, text, cache: audioCache,
                 onStart: () => {
                     if (current !== generation) return;
                     clearTimeout(startTimer);
+                    completePreparation(true);
                     status('Lumi está hablando...');
                     openDialog();
                     if (! speaking) animateAvatars(true);
@@ -251,6 +283,7 @@ export function initChatSpeech(root) {
         utterance.onstart = () => {
             if (! isCurrent()) return;
             clearTimeout(startTimer);
+            completePreparation(true);
             status('Lumi está hablando...');
             openDialog();
             if (! speaking) animateAvatars(true);
@@ -312,7 +345,6 @@ export function initChatSpeech(root) {
     };
 
     const preferReading = () => {
-        enabled = false;
         stop({ afterClose: () => readTarget.focus({ preventScroll: true }) });
     };
     root.querySelectorAll('[data-chat-prefer-reading]').forEach((button) => {
@@ -328,7 +360,6 @@ export function initChatSpeech(root) {
         if (event.clientX < bounds.left || event.clientX > bounds.right
             || event.clientY < bounds.top || event.clientY > bounds.bottom) preferReading();
     });
-    stopButton.addEventListener('click', stop);
     const suspend = () => {
         stop({ immediate: true });
         mediaGeneration += 1;
@@ -344,10 +375,10 @@ export function initChatSpeech(root) {
         stop,
         bindResponse(button, content) {
             button.disabled = ! speechText(content);
-            button.addEventListener('click', () => play(content));
+            button.addEventListener('click', () => play(content, { button }));
         },
-        speak(content) {
-            if (enabled) play(content);
+        speak(content, options = {}) {
+            return play(content, options);
         },
     };
 }

@@ -110,5 +110,18 @@ class SpeechTest extends TestCase
     {
         $this->patch(route('profile.voice.update'), ['tts_voice' => 'auto'])->assertRedirect(route('login'));
         $this->postJson(route('speech.store'), ['text' => 'Hola', 'voice' => 'piper:es_AR-daniela-high'])->assertUnauthorized();
+        $this->postJson(route('speech.prepare'))->assertUnauthorized();
+    }
+
+    public function test_preload_uses_the_saved_voice_and_validates_voice_changes(): void
+    {
+        $this->mock(LocalSpeech::class, function (MockInterface $mock) {
+            $mock->shouldReceive('prepare')->with('piper:es_MX-claude-high')->once()->andReturnTrue();
+        });
+        $user = User::factory()->create(['tts_voice' => 'piper:es_MX-claude-high']);
+        $this->actingAs($user)->postJson(route('speech.prepare'))->assertStatus(202);
+        $this->postJson(route('speech.prepare'), ['voice' => '../../secret'])->assertUnprocessable();
+        $user->update(['tts_voice' => 'browser:example']);
+        $this->postJson(route('speech.prepare'))->assertOk()->assertJsonPath('voice', 'browser:example');
     }
 }

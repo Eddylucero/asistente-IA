@@ -109,7 +109,6 @@
                     </div>
 
                     <div class="flex flex-wrap items-center gap-2 mb-3 text-label-sm font-label-sm text-on-surface-variant">
-                        <button class="px-3 py-2 rounded-full bg-surface-container hover:bg-surface-container-highest" type="button" data-chat-speech-stop hidden>Detener voz</button>
                         <span class="lg:hidden" data-chat-speech-status aria-live="polite">Lista para conversar</span>
                     </div>
 

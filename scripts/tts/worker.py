@@ -1,5 +1,6 @@
 """Local Piper process: keep voice models in memory between requests."""
 import io
+import hashlib
 import json
 import os
 import secrets
@@ -14,11 +15,42 @@ ROOT = Path(__file__).resolve().parents[2]
 MODELS = ROOT / "storage/app/private/tts/models"
 RUNTIME = MODELS / ".runtime-cache"
 INFO = RUNTIME / "worker.json"
-VERSION = str(Path(__file__).stat().st_mtime_ns)
+VERSION = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
 VOICES = {}
 LOCK = threading.Lock()
+STATE_LOCK = threading.Lock()
+PREPARING = set()
 LAST_USE = time.monotonic()
 TOKEN = secrets.token_hex(32)
+
+def requested_model(value):
+    model = Path(value).resolve()
+    if model.parent != MODELS.resolve() or model.suffix != ".onnx" or not model.is_file():
+        raise ValueError("Invalid model")
+    return model
+
+def prepare_voice(model):
+    key = str(model)
+    with STATE_LOCK:
+        if key in VOICES or key in PREPARING:
+            return
+        PREPARING.add(key)
+    def prepare():
+        global LAST_USE
+        try:
+            with LOCK:
+                voice = load_voice(model)
+                # Initialize the phonemizer and inference before the first reading.
+                for _ in voice.synthesize("Hola."):
+                    pass
+        except Exception:
+            # A later synthesis request can retry and report the failure normally.
+            pass
+        finally:
+            with STATE_LOCK:
+                PREPARING.discard(key)
+            LAST_USE = time.monotonic()
+    threading.Thread(target=prepare, daemon=True).start()
 
 def load_voice(model):
     import onnxruntime
@@ -87,6 +119,10 @@ class Handler(BaseHTTPRequestHandler):
             if length <= 0 or length > 100000:
                 raise ValueError("Invalid request")
             request = json.loads(self.rfile.read(length))
+            if self.path == "/prepare":
+                prepare_voice(requested_model(request["model"]))
+                self.respond(202, b'{}')
+                return
             with LOCK:
                 if self.path == "/warm":
                     for model in MODELS.glob("*.onnx"):
@@ -94,9 +130,9 @@ class Handler(BaseHTTPRequestHandler):
                     result = json.dumps({"models": len(VOICES)}).encode()
                     kind = "application/json"
                 else:
-                    model = Path(request["model"]).resolve()
+                    model = requested_model(request["model"])
                     text = request["text"]
-                    if model.parent != MODELS.resolve() or model.suffix != ".onnx" or not isinstance(text, str) or not 0 < len(text) <= 5000:
+                    if not isinstance(text, str) or not 0 < len(text) <= 5000:
                         raise ValueError("Invalid synthesis")
                     voice = load_voice(model)
                     buffer = io.BytesIO()

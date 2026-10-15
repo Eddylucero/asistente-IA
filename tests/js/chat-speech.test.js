@@ -10,6 +10,7 @@ function element() {
         classList: { add: (value) => classes.add(value), remove: (value) => classes.delete(value), contains: (value) => classes.has(value), toggle: (value, force) => force ? classes.add(value) : classes.delete(value) },
         addEventListener: (name, callback) => { events[name] = callback; },
         setAttribute() {},
+        removeAttribute() {},
         click: () => events.click?.({}),
         dispatch: (name, event) => events[name]?.(event),
         focus() { this.focused = true; },
@@ -17,7 +18,9 @@ function element() {
 }
 
 function setup(supported = true, reducedMotion = true, dataset = {}) {
-    const stop = element(), status = element();
+    const status = element();
+    const loader = element();
+    loader.classList.add('hidden');
     const preferReading = element(), readTarget = element(), videoError = element();
     const dialog = Object.assign(element(), { open: false, showModal() { this.open = true; }, close() { this.open = false; } });
     const media = () => Object.assign(element(), { readyState: 1, currentTime: 0, plays: 0, pauses: 0, paused: true, style: {},
@@ -43,9 +46,8 @@ function setup(supported = true, reducedMotion = true, dataset = {}) {
         requestAnimationFrame(callback) { frames.set(++frameId, callback); return frameId; },
         cancelAnimationFrame(id) { frames.delete(id); },
     };
-    globalThis.document = { addEventListener() {} };
-    const selectors = { '[data-chat-speech-stop]': stop,
-        '[data-chat-speech-dialog]': dialog, '[data-chat-messages]': readTarget, '[data-chat-video-error]': videoError };
+    globalThis.document = { addEventListener() {}, getElementById: () => loader };
+    const selectors = { '[data-chat-speech-dialog]': dialog, '[data-chat-messages]': readTarget, '[data-chat-video-error]': videoError };
     const root = {
         dataset,
         querySelector: (selector) => selectors[selector],
@@ -65,7 +67,7 @@ function setup(supported = true, reducedMotion = true, dataset = {}) {
         frames.clear();
         callbacks.forEach((callback) => callback(time));
     };
-    return { speech, createReplay, stop, status, video, greeting, dialog, preferReading, readTarget, videoError, utterances, synth, advanceFrame, pageEvents };
+    return { speech, createReplay, status, video, greeting, dialog, preferReading, readTarget, videoError, utterances, synth, advanceFrame, pageEvents, loader };
 }
 
 test('reads link labels and table contents without URLs, map markers or Markdown', () => {
@@ -107,10 +109,9 @@ test('greets on entry, shows talking video in the modal during speech and resume
     assert.equal(ui.video.classList.contains('opacity-0'), true);
     assert.equal(ui.greeting.classList.contains('opacity-0'), false);
     assert.equal(ui.dialog.open, false);
-    assert.equal(ui.stop.hidden, true);
 });
 
-test('silencing cancels playback, ignores old events and allows manual replay', async (t) => {
+test('closing a reading cancels its playback, ignores old events and allows the next automatic reply', async (t) => {
     t.mock.timers.enable({ apis: ['setTimeout'] });
     const ui = setup();
     ui.speech.speak('Primera respuesta.');
@@ -121,9 +122,9 @@ test('silencing cancels playback, ignores old events and allows manual replay', 
     old.onend();
     assert.equal(ui.video.classList.contains('opacity-0'), true);
     ui.speech.speak('Nueva respuesta.');
-    assert.equal(ui.utterances.length, 1);
+    assert.equal(ui.utterances.length, 2);
     ui.createReplay('Nueva respuesta.').click();
-    assert.equal(ui.utterances[1].text, 'Nueva respuesta.');
+    assert.equal(ui.utterances[2].text, 'Nueva respuesta.');
     ui.speech.stop({ immediate: true });
 });
 
@@ -154,7 +155,7 @@ test('missing TTS support leaves the chat available', () => {
     assert.equal(ui.greeting.plays, 1);
 });
 
-test('Mejor leer cancels speech, closes the modal and silences future automatic replies', (t) => {
+test('Mejor leer closes the current reading and the next response still speaks before revealing its text', (t) => {
     t.mock.timers.enable({ apis: ['setTimeout'] });
     const ui = setup();
     ui.speech.speak('Una respuesta.');
@@ -166,11 +167,14 @@ test('Mejor leer cancels speech, closes the modal and silences future automatic 
     assert.equal(ui.greeting.classList.contains('opacity-0'), false);
     ui.utterances[0].onstart();
     assert.equal(ui.dialog.open, false, 'late events cannot reopen the modal');
-    ui.speech.speak('Segunda respuesta.');
-    assert.equal(ui.utterances.length, 1);
-    ui.createReplay('Segunda respuesta.').click();
+    let revealed = false;
+    ui.speech.speak('Segunda respuesta.', { onReady: () => { revealed = true; } });
     assert.equal(ui.utterances.length, 2);
     assert.equal(ui.utterances[1].text, 'Segunda respuesta.');
+    assert.equal(revealed, false);
+    ui.utterances[1].onstart();
+    assert.equal(revealed, true);
+    assert.equal(ui.dialog.open, true);
     ui.speech.stop({ immediate: true });
 });
 
@@ -412,4 +416,48 @@ test('local audio opens the robot modal and preserves its pose at natural comple
     t.mock.timers.tick(360);
     assert.equal(ui.dialog.open, false);
     assert.equal(ui.greeting.paused, false);
+});
+
+test('only speech start reveals a new response; failure and cancellation request recovery instead', () => {
+    const ui = setup();
+    const revealed = [];
+    const unavailable = [];
+    ui.speech.speak('Primera respuesta.', { onReady: () => revealed.push('first') });
+    assert.deepEqual(revealed, []);
+    ui.utterances[0].onstart();
+    assert.deepEqual(revealed, ['first']);
+    ui.speech.speak('Segunda respuesta.', { onReady: () => revealed.push('error'), onUnavailable: () => unavailable.push('error') });
+    ui.utterances[1].onerror();
+    assert.deepEqual(revealed, ['first']);
+    ui.speech.speak('Tercera respuesta.', { onReady: () => revealed.push('cancelled'), onUnavailable: () => unavailable.push('cancelled') });
+    ui.speech.stop({ immediate: true });
+    ui.utterances[2].onstart();
+    assert.deepEqual(revealed, ['first']);
+    assert.deepEqual(unavailable, ['error', 'cancelled']);
+});
+
+test('manual listening uses the central loader until playback, failure or cancellation', () => {
+    const ui = setup();
+    const button = ui.createReplay('Una respuesta.');
+    button.innerHTML = 'Escuchar respuesta';
+    button.click();
+    assert.equal(button.disabled, true);
+    assert.equal(button.innerHTML, 'Escuchar respuesta');
+    assert.equal(ui.loader.classList.contains('flex'), true);
+    assert.equal(ui.loader.classList.contains('hidden'), false);
+    ui.utterances[0].onstart();
+    assert.equal(button.disabled, false);
+    assert.equal(button.innerHTML, 'Escuchar respuesta');
+    assert.equal(ui.loader.classList.contains('hidden'), true);
+    assert.equal(ui.loader.classList.contains('flex'), false);
+    button.click();
+    ui.utterances[1].onerror();
+    assert.equal(button.disabled, false);
+    assert.equal(button.innerHTML, 'Escuchar respuesta');
+    assert.equal(ui.loader.classList.contains('hidden'), true);
+    button.click();
+    ui.speech.stop({ immediate: true });
+    assert.equal(button.disabled, false);
+    assert.equal(button.innerHTML, 'Escuchar respuesta');
+    assert.equal(ui.loader.classList.contains('hidden'), true);
 });

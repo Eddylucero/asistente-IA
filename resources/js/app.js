@@ -11,6 +11,7 @@ import { initTheme, toggleTheme } from './ui/theme';
 import { initValidation } from './ui/validation';
 import { initVoice } from './ui/voice';
 import { initVoicePreferences } from './ui/voice-preferences';
+import { initSpeechPreload } from './ui/speech-preload.js';
 import {
     initAccountDeleteConfirm,
     initConversationDeleteConfirm,
@@ -28,6 +29,7 @@ window.Swal = Swal;
 window.appUI = { showLoader, hideLoader, toast, success, error, toggleTheme };
 
 $(function () {
+    initSpeechPreload();
     initTheme();
     initDrawer();
     initLoader();

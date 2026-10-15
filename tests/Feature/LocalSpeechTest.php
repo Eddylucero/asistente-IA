@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Services\LocalSpeech;
 use Illuminate\Process\PendingProcess;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Process;
 use RuntimeException;
 use Tests\TestCase;
@@ -61,5 +62,28 @@ class LocalSpeechTest extends TestCase
         Process::fake(fn () => Process::result(output: 'RIFF0000invalid'));
         $this->expectException(RuntimeException::class);
         app(LocalSpeech::class)->synthesize('Hola', 'piper:es_AR-daniela-high');
+    }
+
+    public function test_ready_worker_is_used_without_starting_another_python_process(): void
+    {
+        $runtime = $this->models.'/.runtime-cache';
+        mkdir($runtime);
+        $info = $runtime.'/worker.json';
+        file_put_contents($info, json_encode([
+            'port' => 12345, 'token' => str_repeat('a', 64),
+            'version' => hash_file('sha256', base_path('scripts/tts/worker.py')),
+        ]));
+        Http::fake(['http://127.0.0.1:12345/*' => Http::response('RIFF0000WAVEaudio')]);
+        Process::fake();
+        try {
+            $speech = app(LocalSpeech::class);
+            $this->assertTrue($speech->prepare('piper:es_AR-daniela-high'));
+            $this->assertSame('RIFF0000WAVEaudio', $speech->synthesize('Hola', 'piper:es_AR-daniela-high'));
+            Process::assertNothingRan();
+            Http::assertSentCount(2);
+        } finally {
+            unlink($info);
+            rmdir($runtime);
+        }
     }
 }

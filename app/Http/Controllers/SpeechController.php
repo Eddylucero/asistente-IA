@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Services\LocalSpeech;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Validation\Rule;
@@ -10,7 +11,29 @@ use Throwable;
 
 class SpeechController extends Controller
 {
-    public function preference(Request $request, LocalSpeech $speech): \Illuminate\Http\JsonResponse
+    public function prepare(Request $request, LocalSpeech $speech): JsonResponse
+    {
+        $validated = $request->validate([
+            'voice' => ['nullable', Rule::in([...array_keys(config('speech.voices', [])), 'auto'])],
+        ]);
+        $voice = $validated['voice'] ?? $request->user()->tts_voice ?? $speech->defaultVoice();
+        if ($voice === 'auto') {
+            $voice = $speech->defaultVoice();
+        }
+        if (! str_starts_with($voice, 'piper:')) {
+            return response()->json(['voice' => $voice])->header('Cache-Control', 'private, no-store');
+        }
+        try {
+            return response()->json(['voice' => $voice], $speech->prepare($voice) ? 202 : 503)
+                ->header('Cache-Control', 'private, no-store');
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return response()->json(['voice' => $voice], 503)->header('Cache-Control', 'private, no-store');
+        }
+    }
+
+    public function preference(Request $request, LocalSpeech $speech): JsonResponse
     {
         return response()->json(['voice' => $request->user()->tts_voice ?: $speech->defaultVoice()])
             ->header('Cache-Control', 'private, no-store');

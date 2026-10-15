@@ -96,3 +96,26 @@ test('silence pauses only the animation and sound resumes it without touching au
     assert.equal(ui.audio().paused, false);
     playback.cancel();
 });
+
+test('recent audio is reused for the same voice and text while a different voice generates its own audio', async (t) => {
+    const ui = setup();
+    const cache = new Map();
+    let requests = 0;
+    t.mock.method(globalThis, 'fetch', async () => {
+        requests++;
+        return { ok: true, blob: async () => new Blob(['audio']) };
+    });
+    for (const voice of ['piper:es_AR-daniela-high', 'piper:es_AR-daniela-high', 'piper:es_MX-claude-high']) {
+        const playback = playLocalSpeech({ ...ui.callbacks, cache, voice });
+        await settle();
+        playback.cancel();
+    }
+    assert.equal(requests, 2);
+    assert.equal(cache.size, 2);
+    for (const text of ['one', 'two', 'three', 'four']) {
+        const playback = playLocalSpeech({ ...ui.callbacks, cache, text });
+        await settle();
+        playback.cancel();
+    }
+    assert.equal(cache.size, 3);
+});

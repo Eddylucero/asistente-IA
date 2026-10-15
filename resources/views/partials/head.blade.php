@@ -1,6 +1,9 @@
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0, viewport-fit=cover" name="viewport"/>
 <meta name="csrf-token" content="{{ csrf_token() }}">
+@auth
+<meta name="speech-prepare-endpoint" content="{{ route('speech.prepare') }}">
+@endauth
 <title>{{ ($title ?? null) ? $title.' · ' : '' }}{{ config('app.name', 'Lumi') }}</title>
 <link href="https://fonts.googleapis.com" rel="preconnect"/>
 <link crossorigin href="https://fonts.gstatic.com" rel="preconnect"/>

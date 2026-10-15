@@ -100,6 +100,7 @@ function createTypingIndicator() {
 
     wrapper.className = 'flex gap-3 self-start max-w-[85%]';
     wrapper.dataset.typingIndicator = '';
+    wrapper.setAttribute('role', 'status');
     wrapper.setAttribute('aria-label', 'Lumi está escribiendo');
     wrapper.innerHTML = `
         <div class="hidden md:flex w-8 h-8 rounded-full bg-primary-container text-on-primary-container items-center justify-center shrink-0 mt-1">
@@ -223,15 +224,48 @@ export function initChat() {
             }
 
             const replies = data.messages.filter((message) => message.role === 'assistant');
-            replies.forEach(append);
-            if (replies.length) speech.speak(replies.map((message) => message.content).join('\n'));
+            if (replies.length) {
+                typingIndicator.setAttribute('aria-label', 'Lumi está preparando la voz');
+                await new Promise((resolve) => {
+                    let revealed = false;
+                    let recovery;
+                    const reveal = () => {
+                        if (revealed) return;
+                        revealed = true;
+                        replies.forEach(append);
+                        resolve();
+                    };
+                    const unavailable = () => {
+                        if (revealed) return;
+                        if (! recovery) {
+                            recovery = document.createElement('div');
+                            recovery.className = 'flex flex-col gap-2 text-label-md text-on-surface-variant';
+                            recovery.innerHTML = '<p>Inicia la voz para ver la respuesta o elige leerla.</p><div class="flex flex-wrap gap-2"><button type="button" class="rounded-full bg-primary px-4 py-2 text-on-primary" data-voice-retry>Escuchar respuesta</button><button type="button" class="rounded-full bg-surface-container px-4 py-2 text-on-surface" data-voice-read>Leer respuesta</button></div>';
+                            recovery.querySelector('[data-voice-retry]').addEventListener('click', () => {
+                                recovery.hidden = true;
+                                start(recovery.querySelector('[data-voice-retry]'));
+                            });
+                            recovery.querySelector('[data-voice-read]').addEventListener('click', reveal);
+                            typingIndicator.classList.add('flex-wrap');
+                            typingIndicator.appendChild(recovery);
+                        }
+                        recovery.hidden = false;
+                        typingIndicator.setAttribute('aria-label', 'La respuesta espera a que inicies la voz');
+                        scrollToEnd();
+                    };
+                    const start = (button) => speech.speak(replies.map((message) => message.content).join('\n'), {
+                        onReady: reveal, onUnavailable: unavailable, button,
+                    });
+                    start();
+                });
+            }
         } catch (failure) {
             append({ content: failure.message, role: 'assistant', time: now() });
         } finally {
             typingIndicator.remove();
             textarea.disabled = false;
             sendButton.disabled = false;
-            textarea.focus();
+            if (! root.querySelector('[data-chat-speech-dialog]')?.open) textarea.focus();
             scrollToEnd();
         }
     };

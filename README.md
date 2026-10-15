@@ -29,8 +29,8 @@ llamadas a la IA.
   que no notifican ese avance, la animación permanece continua.
   Cada respuesta de Lumi incluye «Escuchar respuesta» encima de su hora para
   volver a reproducir ese mensaje. También permite detener la lectura.
-  «Mejor leer» cierra el modal, detiene la voz y silencia la lectura automática
-  durante la visita; las respuestas se pueden escuchar manualmente con su botón.
+  «Mejor leer» cierra el modal y detiene solo la lectura actual. Cada respuesta
+  nueva vuelve a leerse automáticamente; también tiene su botón para repetirla.
   La voz depende de las voces instaladas en el dispositivo; el video simula el
   habla sin sincronizar cada palabra con los labios. No requiere una API de TTS.
 - **Modo voz**: dictado por micrófono con la Web Speech API del navegador.
@@ -235,12 +235,21 @@ sus fichas `MODEL_CARD` incluyen las licencias y la procedencia de cada voz.
 Piper se distribuye bajo GPL-3.0. También se muestran las voces en español del
 navegador, que pueden variar según el dispositivo.
 
-El motor local arranca automáticamente y reutiliza los modelos cargados entre
-lecturas. Se cierra después de diez minutos sin uso; la primera lectura tras
-ese cierre necesita cargar la voz otra vez. Solo escucha en la interfaz local
+El motor local precarga en segundo plano la voz seleccionada al entrar a la
+aplicación y al elegir otra en el perfil. Reutiliza los modelos entre lecturas;
+Laravel se comunica directamente con el motor ya iniciado, sin abrir Python
+en cada lectura. Mientras la página esté visible, mantiene la voz lista.
+Se cierra después de diez minutos sin uso. Si se pulsa escuchar antes de que
+termine la precarga inicial, todavía habrá que esperar lo que falte.
+Solo escucha en la interfaz local
 y sus peticiones requieren una credencial interna del servidor.
-El audio se genera en memoria y se devuelve como WAV sin almacenamiento ni
-caché de respuestas. La animación del robot detecta silencios del audio local;
+El audio se genera en memoria y se devuelve como WAV sin guardarlo en disco.
+El chat conserva hasta tres audios recientes (máximo 8 MB) en la memoria de
+esa página para reproducirlos de nuevo sin sintetizarlos; cambiar de voz usa
+otro audio. Las respuestas nuevas aparecen al comenzar la lectura. Si la voz
+falla o se detiene su preparación, se puede reintentar o elegir leer el texto;
+la respuesta no se revela automáticamente sin haber iniciado la voz.
+La animación del robot detecta silencios del audio local;
 no añade pausas a la lectura. Si el navegador bloquea la reproducción automática,
 se puede iniciar con **Escuchar respuesta**.
 

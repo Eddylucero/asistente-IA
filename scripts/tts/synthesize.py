@@ -1,5 +1,6 @@
 """Send one JSON request to the local Piper worker and emit its WAV."""
 import json
+import hashlib
 import os
 import subprocess
 import sys
@@ -21,7 +22,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 WORKER = Path(__file__).with_name("worker.py")
 INFO = ROOT / "storage/app/private/tts/models/.runtime-cache/worker.json"
-VERSION = str(WORKER.stat().st_mtime_ns)
+VERSION = hashlib.sha256(WORKER.read_bytes()).hexdigest()
 
 def read_info():
     try:
@@ -78,6 +79,9 @@ def main():
     info = ensure_worker()
     if sys.argv[1] == "--warm":
         print(request(info, "/warm", {}, timeout=120).decode())
+        return
+    if sys.argv[1] == "--prepare":
+        request(info, "/prepare", {"model": str(Path(sys.argv[2]).resolve())}, timeout=2)
         return
     text = json.loads(sys.stdin.buffer.read().decode("utf-8"))["text"]
     result = request(info, "/synthesize", {"model": str(Path(sys.argv[1]).resolve()), "text": text})

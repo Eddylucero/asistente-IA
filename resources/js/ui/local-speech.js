@@ -1,10 +1,19 @@
-export function playLocalSpeech({ endpoint, voice, text, onStart, onEnd, onError, onPause = () => {}, onMotion = () => {} }) {
+export function playLocalSpeech({ endpoint, voice, text, cache, onStart, onEnd, onError, onPause = () => {}, onMotion = () => {} }) {
     const controller = new AbortController();
     let cancelled = false;
     let audio;
     let url;
     let context;
     let frame;
+    const cacheKey = JSON.stringify([endpoint, voice, text]);
+    const remember = (blob) => {
+        if (! cache || blob.size > 8 * 1024 * 1024) return;
+        cache.delete(cacheKey);
+        cache.set(cacheKey, blob);
+        while (cache.size > 3 || [...cache.values()].reduce((bytes, item) => bytes + item.size, 0) > 8 * 1024 * 1024) {
+            cache.delete(cache.keys().next().value);
+        }
+    };
     const startTimer = setTimeout(() => {
         controller.abort();
         fail(new Error('La voz tardó demasiado en prepararse. Intenta con otra voz.'));
@@ -60,18 +69,22 @@ export function playLocalSpeech({ endpoint, voice, text, onStart, onEnd, onError
 
     (async () => {
         try {
-            const response = await fetch(endpoint, {
-                method: 'POST', signal: controller.signal,
-                headers: { 'Content-Type': 'application/json', Accept: 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content },
-                body: JSON.stringify({ text, voice }),
-            });
-            if (! response.ok) {
-                const data = await response.json();
-                throw new Error(data.message || 'No se pudo generar la voz.');
+            let blob = cache?.get(cacheKey);
+            if (! blob) {
+                const response = await fetch(endpoint, {
+                    method: 'POST', signal: controller.signal,
+                    headers: { 'Content-Type': 'application/json', Accept: 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content },
+                    body: JSON.stringify({ text, voice }),
+                });
+                if (! response.ok) {
+                    const data = await response.json();
+                    throw new Error(data.message || 'No se pudo generar la voz.');
+                }
+                blob = await response.blob();
             }
-            const blob = await response.blob();
             if (cancelled) return;
+            remember(blob);
             url = URL.createObjectURL(blob);
             audio = new window.Audio(url);
             let started = false;
@@ -89,7 +102,7 @@ export function playLocalSpeech({ endpoint, voice, text, onStart, onEnd, onError
                 release();
                 onEnd();
             };
-            audio.onerror = () => fail(new Error('No se pudo reproducir el audio.'));
+            audio.onerror = () => { cache?.delete(cacheKey); fail(new Error('No se pudo reproducir el audio.')); };
             await audio.play();
         } catch (error) { fail(error); }
     })();

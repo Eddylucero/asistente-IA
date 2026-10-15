@@ -1,5 +1,6 @@
 import { browserVoiceId, chooseBrowserVoice, spanishVoices } from './speech-voices.js';
 import { playLocalSpeech } from './local-speech.js';
+import { prepareLocalVoice } from './speech-preload.js';
 
 const SAMPLE = 'Hola, soy Lumi. Estoy aquí para escucharte y acompañarte. Podemos conversar con calma, a tu ritmo.';
 
@@ -77,7 +78,12 @@ export function initVoicePreferences() {
         try { synth.speak(utterance); } catch { failure(); }
     });
     stopButton.addEventListener('click', () => { stop(); status.textContent = 'Muestra detenida.'; });
-    select.addEventListener('change', () => { stop(); preferred = select.value; status.textContent = 'Escucha una muestra antes de guardar.'; });
+    select.addEventListener('change', () => {
+        stop();
+        preferred = select.value;
+        prepareLocalVoice(preferred);
+        status.textContent = 'Escucha una muestra antes de guardar.';
+    });
     root.closest('dialog')?.addEventListener('close', stop);
     root.addEventListener('submit', stop);
     window.addEventListener('pagehide', stop);
