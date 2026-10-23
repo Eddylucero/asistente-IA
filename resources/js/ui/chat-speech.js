@@ -21,7 +21,7 @@ export function speechText(content) {
         .trim();
 }
 
-export function initChatSpeech(root) {
+export function initChatSpeech(root, { inline = false } = {}) {
     const synth = window.speechSynthesis;
     let voicePreference = root.dataset?.ttsVoice || 'auto';
     const usesLocalVoice = voicePreference.startsWith('piper:');
@@ -49,6 +49,8 @@ export function initChatSpeech(root) {
     let preferenceRequest;
     let pendingReady;
     let pendingUnavailable;
+    let pendingEnd;
+    let pendingError;
     let loadingButton;
     const audioCache = new Map();
 
@@ -116,6 +118,7 @@ export function initChatSpeech(root) {
     };
 
     const openDialog = () => {
+        if (inline) return;
         clearTimeout(closeTimer);
         dialog.classList.remove('is-closing');
         if (! dialog.open) dialog.showModal();
@@ -123,7 +126,7 @@ export function initChatSpeech(root) {
 
     const closeDialog = (afterClose, immediate = false) => {
         clearTimeout(closeTimer);
-        if (! dialog.open) {
+        if (inline || ! dialog.open) {
             afterClose();
             return;
         }
@@ -155,6 +158,8 @@ export function initChatSpeech(root) {
         clearTimeout(finishTimer);
         clearVisualPause();
         activeUtterance = null;
+        pendingEnd = null;
+        pendingError = null;
         localPlayback?.cancel();
         localPlayback = null;
         synth?.cancel();
@@ -179,7 +184,11 @@ export function initChatSpeech(root) {
         finishTimer = setTimeout(() => {
             if (current !== generation) return;
             closeDialog(() => {
-                if (current === generation) returnToGreeting();
+                if (current !== generation) return;
+                returnToGreeting();
+                const complete = pendingEnd;
+                pendingEnd = null;
+                complete?.();
             });
         }, FINISH_HOLD_MS);
     };
@@ -206,14 +215,18 @@ export function initChatSpeech(root) {
     }
 
     const reportSpeechFailure = (message) => {
+        const failed = pendingError;
         stop({ afterClose: () => status(message) });
         status(message);
+        failed?.();
     };
 
-    const play = async (content, { onReady, onUnavailable, button } = {}) => {
+    const play = async (content, { onReady, onUnavailable, onEnd, onError, button } = {}) => {
         stop();
         pendingReady = onReady;
         pendingUnavailable = onUnavailable;
+        pendingEnd = onEnd;
+        pendingError = onError;
         const text = speechText(content);
         if (! text) { completePreparation(); return; }
 
@@ -350,11 +363,11 @@ export function initChatSpeech(root) {
     root.querySelectorAll('[data-chat-prefer-reading]').forEach((button) => {
         button.addEventListener('click', preferReading);
     });
-    dialog.addEventListener('cancel', (event) => {
+    dialog?.addEventListener('cancel', (event) => {
         event.preventDefault();
         preferReading();
     });
-    dialog.addEventListener('click', (event) => {
+    dialog?.addEventListener('click', (event) => {
         if (event.target !== dialog) return;
         const bounds = dialog.getBoundingClientRect();
         if (event.clientX < bounds.left || event.clientX > bounds.right

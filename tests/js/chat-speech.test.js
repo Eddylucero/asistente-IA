@@ -17,7 +17,7 @@ function element() {
     };
 }
 
-function setup(supported = true, reducedMotion = true, dataset = {}) {
+function setup(supported = true, reducedMotion = true, dataset = {}, options = {}) {
     const status = element();
     const loader = element();
     loader.classList.add('hidden');
@@ -48,6 +48,10 @@ function setup(supported = true, reducedMotion = true, dataset = {}) {
     };
     globalThis.document = { addEventListener() {}, getElementById: () => loader };
     const selectors = { '[data-chat-speech-dialog]': dialog, '[data-chat-messages]': readTarget, '[data-chat-video-error]': videoError };
+    if (options.inline) {
+        delete selectors['[data-chat-speech-dialog]'];
+        delete selectors['[data-chat-messages]'];
+    }
     const root = {
         dataset,
         querySelector: (selector) => selectors[selector],
@@ -55,7 +59,7 @@ function setup(supported = true, reducedMotion = true, dataset = {}) {
             : selector === '[data-chat-prefer-reading]' ? [preferReading]
                 : [{ querySelector: (name) => name === '[data-avatar-talking]' ? talkingLayer : greetingLayer }],
     };
-    const speech = initChatSpeech(root);
+    const speech = initChatSpeech(root, options);
     const createReplay = (content) => {
         const button = element();
         speech.bindResponse(button, content);
@@ -72,6 +76,34 @@ function setup(supported = true, reducedMotion = true, dataset = {}) {
 
 test('reads link labels and table contents without URLs, map markers or Markdown', () => {
     assert.equal(speechText('**Hola**\n- Visita [la UTC](https://utc.edu.ec).\n[[UTC_MAPA_MATRIZ]]\n| Sede | Ciudad |\n| --- | --- |\n| Matriz | Latacunga |'), 'Hola Visita la UTC. Sede Ciudad Matriz Latacunga');
+});
+
+test('inline voice replies animate the avatar without a modal and report completion once', (t) => {
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    const ui = setup(true, true, {}, { inline: true });
+    let ended = 0;
+    ui.speech.speak('Hola.', { onEnd: () => ended++ });
+    ui.utterances[0].onstart();
+    assert.equal(ui.dialog.open, false);
+    assert.equal(ui.video.paused, false);
+    ui.utterances[0].onend();
+    t.mock.timers.tick(451);
+    assert.equal(ended, 1);
+    assert.equal(ui.video.paused, true);
+    assert.equal(ui.greeting.paused, false);
+});
+
+test('a voice failure after audio starts still notifies the conversation controller', (t) => {
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    const ui = setup(true, true, {}, { inline: true });
+    let errors = 0, ended = 0;
+    ui.speech.speak('Hola.', { onError: () => errors++, onEnd: () => ended++ });
+    ui.utterances[0].onstart();
+    ui.utterances[0].onerror();
+    t.mock.timers.tick(1000);
+    assert.equal(errors, 1);
+    assert.equal(ended, 0);
+    assert.equal(ui.video.paused, true);
 });
 
 test('returning from browser history resumes greeting videos after page suspension', () => {

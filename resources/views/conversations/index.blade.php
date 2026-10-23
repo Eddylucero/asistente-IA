@@ -99,25 +99,8 @@
                 </div>
 
                 <div class="p-stack-md bg-surface-container-lowest shrink-0">
-                    <div class="flex flex-wrap gap-2 pb-stack-sm mb-2" data-chat-suggestions>
-                        <button class="whitespace-nowrap px-4 py-2 rounded-full bg-surface-container hover:bg-surface-container-highest text-on-surface text-label-md font-label-md transition-colors shadow-sm" type="button" data-chat-suggestion-toggle data-expanded="false">
-                            Sugerencias
-                        </button>
-                        <a class="whitespace-nowrap px-4 py-2 rounded-full bg-surface-container hover:bg-surface-container-highest text-on-surface text-label-md font-label-md transition-colors shadow-sm flex items-center gap-1" href="{{ route('voice.index') }}">
-                            <span class="material-symbols-outlined text-[16px]">mic</span> Prefiero hablarlo
-                        </a>
-                    </div>
-
                     <div class="flex flex-wrap items-center gap-2 mb-3 text-label-sm font-label-sm text-on-surface-variant">
                         <span class="lg:hidden" data-chat-speech-status aria-live="polite">Lista para conversar</span>
-                    </div>
-
-                    <div class="hidden flex-wrap gap-2 pb-stack-sm no-scrollbar mb-2" data-chat-suggestion-list>
-                        @foreach ($suggestions as $suggestion)
-                            <button class="whitespace-nowrap px-4 py-2 rounded-full bg-surface-container hover:bg-surface-container-highest text-on-surface text-label-md font-label-md transition-colors shadow-sm" type="button" data-chat-suggestion>
-                                {{ $suggestion }}
-                            </button>
-                        @endforeach
                     </div>
 
                     <div class="relative bg-surface rounded-[24px] shadow-sm flex items-end min-h-[52px] p-1.5 ring-1 ring-outline-variant/30 focus-within:ring-2 focus-within:ring-primary focus-within:shadow-md transition-all sm:min-h-[64px] sm:p-2">
@@ -130,7 +113,7 @@
                             data-chat-input></textarea>
 
                         <div class="flex items-center gap-1 shrink-0 ml-2">
-                            <a class="w-12 h-12 flex items-center justify-center rounded-full text-primary hover:bg-primary/10 transition-colors" href="{{ route('voice.index') }}" aria-label="Hablar">
+                            <a class="w-12 h-12 flex items-center justify-center rounded-full text-primary hover:bg-primary/10 transition-colors" href="{{ route('voice.index', $conversation ? ['conversation' => $conversation->id] : ['new' => 1]) }}" aria-label="Hablar">
                                 <span class="material-symbols-outlined">mic</span>
                             </a>
                             <button class="w-12 h-12 flex items-center justify-center rounded-full bg-primary text-on-primary shadow-sm hover:opacity-90 transition-opacity disabled:opacity-50" type="button" aria-label="Enviar" data-chat-send>

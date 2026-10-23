@@ -21,7 +21,7 @@ Route::middleware('auth')->group(function () {
         ->middleware('throttle:30,1')
         ->name('conversations.messages.store');
     Route::get('/voz', [VoiceController::class, 'index'])->name('voice.index');
-    Route::post('/voz/mensajes', [VoiceController::class, 'store'])->name('voice.messages.store');
+    Route::post('/voz/mensajes', [VoiceController::class, 'store'])->middleware('throttle:30,1')->name('voice.messages.store');
     Route::post('/voz/sintesis', [SpeechController::class, 'store'])->middleware('throttle:20,1')->name('speech.store');
     Route::get('/voz/preferencia', [SpeechController::class, 'preference'])->name('speech.preference');
     Route::post('/voz/preparar', [SpeechController::class, 'prepare'])->middleware('throttle:20,1')->name('speech.prepare');

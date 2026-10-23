@@ -86,39 +86,6 @@ class Conversation extends Model
         };
     }
 
-    public function suggestions(): array
-    {
-        $text = Str::ascii(Str::lower($this->messages->where('role', 'user')->pluck('content')->implode(' ')));
-
-        return match (true) {
-            Str::contains($text, ['ansiedad', 'nervioso', 'estres', 'preocup']) => [
-                '¿Qué situación está activando más esa sensación?',
-                '¿Quieres que hagamos un ejercicio breve de respiración?',
-                '¿Qué necesitas resolver primero ahora mismo?',
-            ],
-            Str::contains($text, ['cansado', 'sueño', 'dormir', 'descans']) => [
-                '¿Qué ha dificultado tu descanso últimamente?',
-                '¿Cómo te sentiste al despertar hoy?',
-                '¿Quieres preparar una rutina sencilla para esta noche?',
-            ],
-            Str::contains($text, ['trabajo', 'oficina', 'presentacion', 'estudio', 'examen']) => [
-                '¿Qué parte de esa situación te preocupa más?',
-                '¿Qué paso pequeño podrías dar hoy?',
-                '¿Quieres ordenar tus ideas antes de actuar?',
-            ],
-            Str::contains($text, ['pareja', 'familia', 'amigo', 'relacion', 'discusion']) => [
-                '¿Qué te gustaría poder expresar en esa conversación?',
-                '¿Qué necesitas de la otra persona?',
-                '¿Quieres practicar cómo decirlo con calma?',
-            ],
-            default => [
-                '¿Qué fue lo más importante de lo que hablamos?',
-                '¿Cómo te sientes después de compartirlo?',
-                '¿Qué te gustaría explorar ahora?',
-            ],
-        };
-    }
-
     public function belongsToCurrentUser(): bool
     {
         return $this->user_id === auth()->id();

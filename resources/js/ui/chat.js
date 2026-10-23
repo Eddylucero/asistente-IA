@@ -173,8 +173,8 @@ export function initChat() {
         list.appendChild(wrapper);
     };
 
-    const send = async (suggested = null) => {
-        const content = (suggested ?? textarea.value).trim();
+    const send = async () => {
+        const content = textarea.value.trim();
 
         if (! content || sendButton.disabled) {
             return;
@@ -284,48 +284,6 @@ export function initChat() {
     });
 
     sendButton.addEventListener('click', () => send());
-
-    const suggestionToggle = root.querySelector('[data-chat-suggestion-toggle]');
-    const suggestionList = root.querySelector('[data-chat-suggestion-list]');
-
-    const setSuggestionsState = (expanded) => {
-        if (! suggestionToggle || ! suggestionList) {
-            return;
-        }
-
-        suggestionToggle.dataset.expanded = String(expanded);
-        suggestionToggle.setAttribute('aria-expanded', String(expanded));
-        suggestionToggle.style.display = expanded ? 'none' : '';
-        suggestionList.classList.toggle('hidden', ! expanded);
-        suggestionList.classList.toggle('flex', expanded);
-    };
-
-    const toggleSuggestions = () => {
-        const expanded = suggestionToggle?.dataset.expanded === 'true';
-        setSuggestionsState(! expanded);
-    };
-
-    if (suggestionToggle) {
-        suggestionToggle.setAttribute('aria-expanded', 'false');
-        suggestionToggle.addEventListener('click', toggleSuggestions);
-    }
-
-    document.addEventListener('click', (event) => {
-        if (suggestionToggle?.dataset.expanded !== 'true') {
-            return;
-        }
-
-        if (! suggestionToggle.contains(event.target) && ! suggestionList?.contains(event.target)) {
-            setSuggestionsState(false);
-        }
-    });
-
-    root.querySelectorAll('[data-chat-suggestion]').forEach((suggestion) => {
-        suggestion.addEventListener('click', async () => {
-            setSuggestionsState(false);
-            await send(suggestion.textContent.trim());
-        });
-    });
 
     resize();
     scrollToEnd();

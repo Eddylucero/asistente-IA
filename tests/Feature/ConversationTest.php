@@ -278,10 +278,12 @@ class ConversationTest extends TestCase
         $response->assertOk()
             ->assertSee('Sesión Actual')
             ->assertSee('Comienza escribiendo cómo te sientes.')
-            ->assertSee('Sugerencias')
-            ->assertSee('Prefiero hablarlo')
-            ->assertSee('data-chat-suggestion-toggle', false)
-            ->assertSee('data-chat-suggestion-list', false);
+            ->assertDontSee('Sugerencias')
+            ->assertDontSee('Prefiero hablarlo')
+            ->assertDontSee('data-chat-suggestion', false)
+            ->assertSee('data-chat-input', false)
+            ->assertSee('data-chat-send', false)
+            ->assertSee('aria-label="Hablar"', false);
 
         $this->assertDatabaseHas('conversations', [
             'id' => $conversation->id,

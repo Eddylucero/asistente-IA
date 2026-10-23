@@ -2,38 +2,37 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\Assistant;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class VoiceController extends Controller
 {
-    public function index(): View
+    public function index(Request $request): View
     {
-        $conversation = auth()->user()->latestConversationOrNull();
+        $validated = $request->validate([
+            'conversation' => ['nullable', 'integer'],
+            'new' => ['sometimes', 'boolean'],
+        ]);
+        $conversation = isset($validated['conversation'])
+            ? $request->user()->conversations()->findOrFail($validated['conversation'])
+            : (($validated['new'] ?? false) ? null : $request->user()->latestConversationOrNull());
 
         return view('voice.index', [
             'conversation' => $conversation,
-            'messages' => $conversation?->messages()->oldest()->get() ?? collect(),
         ]);
     }
 
-    public function store(Request $request): JsonResponse
+    public function store(Request $request, Assistant $assistant, ConversationController $conversations): JsonResponse
     {
-        $validated = $request->validate([
-            'content' => ['required', 'string', 'max:5000'],
-        ]);
+        $response = $conversations->store($request, $assistant);
+        if ($response->isSuccessful()) {
+            $payload = $response->getData(true);
+            $payload['message'] = $payload['messages'][0];
+            $response->setData($payload)->setStatusCode(201);
+        }
 
-        $conversation = auth()->user()->latestConversationOrNull()
-            ?? auth()->user()->conversations()->create();
-
-        $message = $conversation->messages()->create([
-            'role' => 'user',
-            'content' => $validated['content'],
-        ]);
-
-        $conversation->rememberTitle($validated['content']);
-
-        return response()->json(['message' => $message->toPayload()], 201);
+        return $response;
     }
 }

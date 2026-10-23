@@ -123,12 +123,6 @@ class ConversationController extends Controller
         return view('conversations.index', [
             'conversation' => $conversation,
             'messages' => $conversation?->messages()->oldest()->get() ?? collect(),
-            'suggestions' => $conversation?->suggestions() ?? [
-                'Me siento cansado',
-                'Estoy muy nervioso',
-                'Necesito calma',
-                'Quiero hablar de ansiedad',
-            ],
         ]);
     }
 

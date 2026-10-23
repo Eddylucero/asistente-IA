@@ -86,6 +86,9 @@ class VoiceLayoutTest extends TestCase
         $this->assertStringContainsString('data-voice-button', $html);
         $this->assertStringContainsString('data-voice-icon', $html);
         $this->assertStringContainsString('data-voice-transcript', $html);
+        $this->assertStringContainsString('images/mente/avatar-move.mp4', $html);
+        $this->assertStringNotContainsString('data-chat-messages', $html);
+        $this->assertStringNotContainsString('data-voice-message=', $html);
         $this->assertStringContainsString('data-endpoint="'.route('voice.messages.store').'"', $html);
         $this->assertStringNotContainsString('webkitSpeechRecognition', $html);
     }

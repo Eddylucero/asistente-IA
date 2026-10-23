@@ -33,7 +33,10 @@ llamadas a la IA.
   nueva vuelve a leerse automáticamente; también tiene su botón para repetirla.
   La voz depende de las voces instaladas en el dispositivo; el video simula el
   habla sin sincronizar cada palabra con los labios. No requiere una API de TTS.
-- **Modo voz**: dictado por micrófono con la Web Speech API del navegador.
+- **Modo voz**: transcribe con la Web Speech API del navegador, sin llamadas de
+  transcripción a Groq. Solo se envía el texto para obtener la respuesta de la IA.
+  Conserva el avatar animado, las respuestas habladas y el historial de la sesión.
+  Requiere un navegador compatible, permiso de micrófono y HTTPS o localhost.
 - **Historial** de conversaciones con borrado individual.
 - **Autenticación completa**: registro, login, Google OAuth y recuperación de
   contraseña por código de 6 dígitos enviado al correo.
@@ -198,9 +201,10 @@ no la de tu cuenta.
 
 ### Micrófono
 
-La pantalla de voz usa la Web Speech API, disponible en Chrome y Edge. El navegador
-solo la habilita en `localhost` o sobre HTTPS. En Firefox el botón aparece
-deshabilitado con un aviso.
+La pantalla de voz usa la Web Speech API del navegador y requiere permiso de
+micrófono y `localhost` o HTTPS. La disponibilidad del servicio de reconocimiento
+depende del navegador; en Brave puede no estar disponible. El dictado no usa la
+API de Groq: únicamente el texto se envía para obtener la respuesta de la IA.
 
 ### Voces locales de Lumi
 
